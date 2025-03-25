@@ -22,12 +22,12 @@ We plan to use either Imgur API or ImageKit API to handle easy image upload and 
 
 ## 5. Selected DB
 
-(firebase firestore for images…?)
+For the database, we’re going with Supabase, because it gives us a lot of flexibility for how we structure data like users, prompts, submissions, and votes. It also supports file storage for images, authentication out of the box, and a clean way to manage relational data like prompt → submission threads or tournament entries. Plus, it’s free and easy to scale if we ever want to take the project further.
 
 ## 6. Target Devices
 
-(2 target device types for testing)
+We decided to go with Android phones and Android tablets to cover the majority of our user base. Since most of the creative challenges will involve uploading photos or digital art, we want to make sure the app works well on phones (for taking and uploading images) and tablets (for sketching, drawing, and viewing submissions on a larger screen). This way, users get the best experience no matter how they interact with the app.
 
 ## 7. Initial Wireframes / Sketches
 
-(Add sketches or wireframes here)
+On the presentation
