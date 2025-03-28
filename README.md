@@ -1,4 +1,4 @@
-# Final Project Proposal – Creative Community Prompt App
+# Final Project Proposal – Muse: Creative Community Prompt App
 
 **Here is our: [Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**
 
