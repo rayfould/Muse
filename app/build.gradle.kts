@@ -1,3 +1,15 @@
+import java.util.Properties // for ImgurAPI
+
+// for local.properties keeping ImgurAPI key secret
+val imgurClientId: String by lazy {
+    val properties = Properties()
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
+        properties.load(localPropsFile.inputStream())
+    }
+    properties.getProperty("IMGUR_CLIENT_ID") ?: throw GradleException("IMGUR_CLIENT_ID not found in local.properties")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,6 +28,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "IMGUR_CLIENT_ID", "\"$imgurClientId\"") // for ImgurAPI key
     }
 
     buildTypes {
@@ -36,11 +49,15 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // added for local.properties
     }
 }
 
 dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.6") // for navigation between different pages
+    implementation("io.coil-kt:coil-compose:2.5.0") // For previewing images
+    implementation("com.squareup.okhttp3:okhttp:4.12.0") // For HTTP uploading to Imgur using ImgurAPI
+
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
