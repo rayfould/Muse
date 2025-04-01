@@ -7,7 +7,7 @@ val imgurClientId: String by lazy {
     if (localPropsFile.exists()) {
         properties.load(localPropsFile.inputStream())
     }
-    properties.getProperty("IMGUR_CLIENT_ID") ?: throw GradleException("IMGUR_CLIENT_ID not found in local.properties")
+    properties.getProperty("IMGUR_CLIENT_ID") ?: "temp-imgur-id"
 }
 
 plugins {
@@ -58,6 +58,18 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0") // For previewing images
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // For HTTP uploading to Imgur using ImgurAPI
 
+    // Use the Supabase BOM to set the version for all modules
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.0.1"))
+
+    // Supabase modules
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+
+    // Ktor dependencies for Supabase networking
+    implementation("io.ktor:ktor-client-core:3.0.0")
+    implementation("io.ktor:ktor-client-okhttp:3.0.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
