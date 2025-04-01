@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+//Composable to allow us to navigate through the app.
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()

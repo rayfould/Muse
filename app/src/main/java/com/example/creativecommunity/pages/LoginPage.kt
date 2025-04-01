@@ -42,7 +42,9 @@ fun LoginPage(navController: NavController) {
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
-    ) {
+    )
+    // Email and Password fields
+    {
         TextField(
             value = email,
             onValueChange = { email = it },
@@ -58,6 +60,7 @@ fun LoginPage(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
+        // Login \ Sign Up Button
         Button(
             onClick = {
                 scope.launch {

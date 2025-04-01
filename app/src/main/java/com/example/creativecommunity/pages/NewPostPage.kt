@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.BuildConfig
@@ -68,6 +69,26 @@ fun NewPostPage(navController: NavController) {
         currImage = uri
         imgurImageURL = null
     }
+
+    // Temp URI for camera capture
+    val contentResolver = LocalContext.current.contentResolver
+    val tempFileUri = remember {
+        FileProvider.getUriForFile(context, "com.example.creativecommunity.fileprovider", java.io.File(context.cacheDir, "temp_image.jpg"))
+    }
+
+    // Camera Launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            // currImage is set by the preview URI below
+            currImage = tempFileUri // Set currImage after snap
+            imgurImageURL = null
+        }
+    }
+
+
+
 
 //https://github.com/AKiniyalocts/imgur-android/tree/master
     //https://stackoverflow.com/questions/13549559/getcontentresolver-openinputstreamuri-throws-filenotfoundexception
@@ -166,7 +187,9 @@ fun NewPostPage(navController: NavController) {
         ) {
             // Take a photo button
             Button(
-                onClick = { /* take a photo */ },
+                onClick = {
+                    cameraLauncher.launch(tempFileUri)
+                },
                 modifier = Modifier.weight(1f)
             ) {
                 Text("Take a photo")
