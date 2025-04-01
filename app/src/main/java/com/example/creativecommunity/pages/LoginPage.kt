@@ -28,6 +28,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.launch
 
+
 @Composable
 fun LoginPage(navController: NavController) {
     var email by remember { mutableStateOf("") }
@@ -69,6 +70,10 @@ fun LoginPage(navController: NavController) {
                             SupabaseClient.client.auth.signUpWith(Email) {
                                 this.email = email
                                 this.password = password
+                                this.data = kotlinx.serialization.json.buildJsonObject {
+                                    //Create json object, before passing it, defaulting to a basic username from email
+                                    put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
+                                }
                             }
                             message = "Signup successful!"
                         } else {

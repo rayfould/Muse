@@ -29,6 +29,9 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.BuildConfig
+import com.example.creativecommunity.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -238,7 +241,21 @@ fun NewPostPage(navController: NavController) {
         if (shouldUpload && currImage != null) { // MAKE SURE POST button clicked AND an image is actually selected
             LaunchedEffect(currImage) { // coroutine
                 val url = uploadImageToImgur(currImage!!) // upload to imgur if currImage not null
-                imgurImageURL = url ?: "Upload failed" // basically an if else block inline
+                if (url != null) {
+                    val userId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
+                    val mockPromptId = "550e8400-e29b-41d4-a716-446655440000" // Replace with real prompt ID later
+                    SupabaseClient.client.postgrest.from("submissions").insert(
+                        mapOf(
+                            "user_id" to userId,
+                            "prompt_id" to mockPromptId,
+                            "content" to postCaption.text,
+                            "image_url" to url
+                        )
+                    )
+                    imgurImageURL = "Post submitted successfully!" // Update UI with success message
+                } else {
+                    imgurImageURL = "Upload failed" // basically an if else block inline
+                }
                 shouldUpload = false // prevent infinite loop for uploading, stop after image uploaded
                 currentlyUploading = false // reset the button functionality --> redisplay "Post to Community" instead of uploading... forever
             }
