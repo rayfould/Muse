@@ -73,7 +73,7 @@ fun LoginPage(navController: NavController) {
                                 this.email = email
                                 this.password = password
                             }
-                            navController.navigate("new_post") {
+                            navController.navigate("main") {
                                 popUpTo("login") { inclusive = true } // Clear login from back stack
                             }
                         }

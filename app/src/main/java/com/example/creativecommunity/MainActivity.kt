@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.creativecommunity.pages.LoginPage
+import com.example.creativecommunity.pages.MainPage
 import com.example.creativecommunity.pages.NewPostPage
 import com.example.creativecommunity.ui.theme.CreativeCommunityTheme
 
@@ -29,10 +30,13 @@ fun AppNavigation() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
-            LoginPage(navController)
+            LoginPage(navController = navController)
+        }
+        composable("main") {
+            MainPage(navController = navController)
         }
         composable("new_post") {
-            NewPostPage(navController) // Your existing placeholder
+            NewPostPage(navController = navController)
         }
     }
 }
