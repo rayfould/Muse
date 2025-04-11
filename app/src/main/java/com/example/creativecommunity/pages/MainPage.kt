@@ -38,7 +38,39 @@ fun MainPage(navController: NavController) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Mock Category: Art")
+            Text("Art")
+        }
+        Button(
+            onClick = {
+                navController.navigate("new_post")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Drawing")
+        }
+        Button(
+            onClick = {
+                navController.navigate("new_post")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Painting")
+        }
+        Button(
+            onClick = {
+                navController.navigate("new_post")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Graphic Design")
+        }
+        Button(
+            onClick = {
+                navController.navigate("new_post")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Knitting")
         }
     }
 }
