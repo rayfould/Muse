@@ -10,6 +10,7 @@ import com.example.creativecommunity.pages.LoginPage
 import com.example.creativecommunity.pages.NewPostPage
 import com.example.creativecommunity.pages.MainPage
 import com.example.creativecommunity.pages.CategoryFeed
+import com.example.creativecommunity.pages.IndividualPostPage
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
@@ -24,7 +25,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
             CategoryFeed(navController, category)
         }
+        composable("individual_post") { IndividualPostPage(navController = navController) }
 
-//        composable("new_post") { NewPostPage(navController) }
     }
 }
