@@ -20,5 +20,13 @@ fun IndividualPostPage(navController: NavController) {
             likeCount = 15,
             commentCount = 8
         )
+
+        // Same comment
+        // run a loop to go through and create comments linked to each post
+        Comment(
+            profileImage = "https://i.imgur.com/OnlfHHd.jpeg",
+            username = "huge_art_fan",
+            commentText = "I love this painting - it's beautiful."
+        )
     }
 }
