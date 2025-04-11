@@ -40,7 +40,7 @@ import okhttp3.Request
 import java.io.InputStream
 
 @Composable
-fun NewPostPage(navController: NavController) {
+fun NewPostPage(navController: NavController, category: String) {
     val context = LocalContext.current
 
     // For caption
@@ -181,7 +181,8 @@ fun NewPostPage(navController: NavController) {
         verticalArrangement = Arrangement.Top
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        Text("New Post Page")
+        Text("You are creating a new '$category' post")
+        Spacer(modifier = Modifier.height(5.dp))
         Text("This week's challenge: Paint a park near you!")
         Spacer(modifier = Modifier.height(24.dp))
         Row(

@@ -32,45 +32,19 @@ fun MainPage(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Mock Category Buttons
-        Button(
-            onClick = {
-                navController.navigate("new_post")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Art")
-        }
-        Button(
-            onClick = {
-                navController.navigate("new_post")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Drawing")
-        }
-        Button(
-            onClick = {
-                navController.navigate("new_post")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Painting")
-        }
-        Button(
-            onClick = {
-                navController.navigate("new_post")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Graphic Design")
-        }
-        Button(
-            onClick = {
-                navController.navigate("new_post")
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Knitting")
+        val categories = listOf("Art", "Drawing", "Painting", "Graphic Design", "Knitting")
+
+        categories.forEach { category ->
+            Button(
+                onClick = {
+                    navController.navigate("new_post/${category}")
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(category)
+            }
         }
     }
 }
