@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import com.example.creativecommunity.pages.LoginPage
 import com.example.creativecommunity.pages.NewPostPage
 import com.example.creativecommunity.pages.MainPage
+import com.example.creativecommunity.pages.CategoryFeed
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
@@ -19,6 +20,11 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
             NewPostPage(navController, category)
         }
+        composable("category_feed/{category}") { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
+            CategoryFeed(navController, category)
+        }
+
 //        composable("new_post") { NewPostPage(navController) }
     }
 }

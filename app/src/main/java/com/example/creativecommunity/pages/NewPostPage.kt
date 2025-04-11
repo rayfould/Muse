@@ -291,7 +291,7 @@ fun NewPostPage(navController: NavController, category: String) {
             // The login page is defaulted as the starting page in the stack, goes back to the Login page
             navController.popBackStack()
         }) {
-            Text("Home")
+            Text("Back to $category Feed")
         }
     }
 }

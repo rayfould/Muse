@@ -37,7 +37,7 @@ fun MainPage(navController: NavController) {
         categories.forEach { category ->
             Button(
                 onClick = {
-                    navController.navigate("new_post/${category}")
+                    navController.navigate("category_feed/${category}")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
