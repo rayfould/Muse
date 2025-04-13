@@ -2,6 +2,7 @@ package com.example.creativecommunity.pages
 
 import android.net.Uri
 import android.util.Base64
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,7 @@ import com.example.creativecommunity.BuildConfig
 import com.example.creativecommunity.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -100,6 +102,11 @@ fun NewPostPage(navController: NavController, category: String) {
         val contentResolver = context.contentResolver
         val inputStream: InputStream? = contentResolver.openInputStream(imageUri)
         val bytes = inputStream?.readBytes()
+        //Add logger
+        if (bytes == null) {
+            Log.e("SupabaseTest", "Failed to read image bytes from URI: $imageUri")
+            return@withContext null
+    }
 
         // convert to a datatype for transfer of data to imgur
         val base64Image = Base64.encodeToString(bytes, Base64.DEFAULT)
@@ -135,6 +142,12 @@ fun NewPostPage(navController: NavController, category: String) {
 
         // https://apidocs.imgur.com/
         val response = okHttpClient.newCall(request).execute() // makes a HTTP call
+        //Add fai logs
+        if (!response.isSuccessful) {
+            Log.e("SupabaseTest", "Imgur upload failed: ${response.code} - ${response.message}")
+            Log.e("SupabaseTest", "Response body: ${response.body?.string()}")
+            return@withContext null
+    }
 
         // extract json response from imgur fetch
 //        val json = response.body?.string()
@@ -169,7 +182,10 @@ fun NewPostPage(navController: NavController, category: String) {
         val matchResult = linkRegex.find(responseFromImgur) // apply the regex to the link response
         val fetchedLink = matchResult?.groups?.get(1)?.value // gets actual link from matchResult
         val actualLink = fetchedLink?.replace("\\/", "/") // remove all escape keys
-
+        //Log link issues
+        if (actualLink == null) {
+            Log.e("SupabaseTest", "Failed to extract link from Imgur response")
+        }
         return@withContext actualLink // 'return' is not allowed here - made me add @withContext
     }
 
@@ -239,12 +255,17 @@ fun NewPostPage(navController: NavController, category: String) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // launch coroutine to upload image to imgur
+        // launch coroutine to upload image to imgur
         if (shouldUpload && currImage != null) { // MAKE SURE POST button clicked AND an image is actually selected
             LaunchedEffect(currImage) { // coroutine
                 val url = uploadImageToImgur(currImage!!) // upload to imgur if currImage not null
                 if (url != null) {
-                    val userId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
-                    val mockPromptId = "550e8400-e29b-41d4-a716-446655440000" // Replace with real prompt ID later
+                    val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id // UUID from auth.users
+                    val userResponse = SupabaseClient.client.postgrest.from("users")
+                        .select(Columns.raw("id")) { filter { eq("auth_id", authId) } }
+                        .decodeSingle<Map<String, Int>>() // Get user_id as integer
+                    val userId = userResponse["id"]
+                    val mockPromptId = 1 // Replace with real prompt ID later
                     SupabaseClient.client.postgrest.from("submissions").insert(
                         mapOf(
                             "user_id" to userId,
@@ -255,7 +276,8 @@ fun NewPostPage(navController: NavController, category: String) {
                     )
                     imgurImageURL = "Post submitted successfully!" // Update UI with success message
                 } else {
-                    imgurImageURL = "Upload failed" // basically an if else block inline
+                    imgurImageURL = "Upload failed - try again later" // More informative message
+                    Log.e("SupabaseTest", "Post failed due to Imgur rate limit or other issue")
                 }
                 shouldUpload = false // prevent infinite loop for uploading, stop after image uploaded
                 currentlyUploading = false // reset the button functionality --> redisplay "Post to Community" instead of uploading... forever
