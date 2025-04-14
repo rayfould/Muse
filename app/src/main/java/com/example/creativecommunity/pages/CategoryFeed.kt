@@ -1,5 +1,6 @@
 package com.example.creativecommunity.pages
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,11 +28,25 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class Prompt(
     val title: String
+)
+
+@Serializable
+data class FeedSubmission(
+    @SerialName("image_url") val image_url: String,
+    @SerialName("content") val content: String,
+    @SerialName("users") val user: UserData
+)
+
+@Serializable
+data class UserData(
+    @SerialName("profile_image") val profile_image: String? = null,
+    @SerialName("username") val username: String? = "Unknown User"
 )
 
 @Composable
@@ -69,22 +86,61 @@ fun CategoryFeed(navController: NavController, category: String) {
 
         Text(text = promptTitle)
 
-        // Post composable
-        // Example of a Post on our community feed
-        Post(
-            profileImage = "https://i.imgur.com/qBPkCnP.jpeg",
-            username = "Bob Ross",
-            postImage = "https://i.imgur.com/NxjUBgB.jpeg",
-            caption = "A Bob Ross Classic",
-            likeCount = 15,
-            commentCount = 8,
+        var submissions by remember { mutableStateOf<List<FeedSubmission>>(emptyList()) }
+        var fetchError by remember { mutableStateOf<String?>(null) }
 
-            // Hardcoded this for now to test functionality - Would pass in Post ID for example
-            onCommentClicked = {
-                navController.navigate("individual_post")
+        LaunchedEffect(category) {
+            try {
+                val fetchedSubmissions = withContext(Dispatchers.IO) {
+                    val result = SupabaseClient.client.postgrest.from("submissions")
+                        .select(Columns.raw("image_url, content, user_id, users!inner(profile_image, username)")) {
+                            filter {
+                                eq("category", category)
+                            }
+                            order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                            limit(10)
+                        }
+                    val submissionsList = result.decodeList<FeedSubmission>()
+                    Log.d("SupabaseTest", "Fetched submissions: $submissionsList")
+                    submissionsList
+                }
+                submissions = fetchedSubmissions
+            } catch (e: Exception) {
+                fetchError = "Failed to load submissions: ${e.message}"
             }
+        }
+
+        val defaultProfileImages = listOf(
+            "https://imgur.com/a/zti9OXl", // Gray square
+            "https://imgur.com/a/J5foGAl", // Smiley face
+            "https://imgur.com/a/LXdQGgq", // Simple avatar silhouette
+            "https://imgur.com/a/JxTUuxz", // Minimalist user icon
+            "https://imgur.com/a/QvrtwHd"  // Abstract shape
         )
-        //
+        val randomDefaultImage = defaultProfileImages.random()
+
+        if (fetchError != null) {
+            Text(text = fetchError!!)
+        } else if (submissions.isEmpty()) {
+            Text(text = "No submissions yet for this category.")
+        } else {
+            LazyColumn {
+                items(submissions) { submission ->
+                    Post(
+                        profileImage = submission.user.profile_image ?: randomDefaultImage, // Random default image if null
+                        username = submission.user.username ?: "Unknown User",
+                        postImage = submission.image_url,
+                        caption = submission.content,
+                        likeCount = 0, // Placeholder, to be implemented later
+                        commentCount = 0, // Placeholder, to be implemented later
+                        onCommentClicked = {
+                            navController.navigate("individual_post")
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
 
         Row() {
             Button(
