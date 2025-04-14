@@ -1,13 +1,16 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -89,6 +94,28 @@ fun CategoryFeed(navController: NavController, category: String) {
         var submissions by remember { mutableStateOf<List<FeedSubmission>>(emptyList()) }
         var fetchError by remember { mutableStateOf<String?>(null) }
 
+        var showPfpDialog by remember { mutableStateOf(false) }
+        var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
+
+        if (showPfpDialog && selectedPfpUrl != null) {
+            Dialog(onDismissRequest = { showPfpDialog = false }) {
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AsyncImage(
+                        model = selectedPfpUrl,
+                        contentDescription = "Enlarged profile picture",
+                        modifier = Modifier
+                            .size(500.dp)
+                            .clickable { showPfpDialog = false }
+                    )
+                }
+            }
+        }
+
         LaunchedEffect(category) {
             try {
                 val fetchedSubmissions = withContext(Dispatchers.IO) {
@@ -111,13 +138,12 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
 
         val defaultProfileImages = listOf(
-            "https://imgur.com/a/zti9OXl", // Gray square
-            "https://imgur.com/a/J5foGAl", // Smiley face
-            "https://imgur.com/a/LXdQGgq", // Simple avatar silhouette
-            "https://imgur.com/a/JxTUuxz", // Minimalist user icon
-            "https://imgur.com/a/QvrtwHd"  // Abstract shape
+            "https://i.imgur.com/DyFZblf.jpeg", // Gray square
+            "https://i.imgur.com/kcbZfpx.png", // Smiley face
+            "https://i.imgur.com/WvDsY4x.jpeg", // Simple avatar silhouette
+            "https://i.imgur.com/iCy2JU1.jpeg", // Minimalist user icon
+            "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
         )
-        val randomDefaultImage = defaultProfileImages.random()
 
         if (fetchError != null) {
             Text(text = fetchError!!)
@@ -126,8 +152,9 @@ fun CategoryFeed(navController: NavController, category: String) {
         } else {
             LazyColumn {
                 items(submissions) { submission ->
+                    val defaultPfp = remember { submission.user.profile_image ?: defaultProfileImages.random() }
                     Post(
-                        profileImage = submission.user.profile_image ?: randomDefaultImage, // Random default image if null
+                        profileImage = defaultPfp,
                         username = submission.user.username ?: "Unknown User",
                         postImage = submission.image_url,
                         caption = submission.content,
@@ -135,6 +162,10 @@ fun CategoryFeed(navController: NavController, category: String) {
                         commentCount = 0, // Placeholder, to be implemented later
                         onCommentClicked = {
                             navController.navigate("individual_post")
+                        },
+                        onProfileClick = {
+                            selectedPfpUrl = defaultPfp
+                            showPfpDialog = true
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
