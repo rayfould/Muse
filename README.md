@@ -9,11 +9,11 @@
 
 
 ## Table of Contents:
-- [Project Setup](#introduction)
-- [API Setup](#installation)
-- [Database Setup](#usage)
-- [Multidevice Testing](#contributing)
-- [Initial Project Proposal](#license)
+- [Project Setup](#project-setup)
+- [API Setup](#api-setup)
+- [Database Setup](#database-setup)
+- [Multidevice Testing](#multidevice-testing)
+- [Initial Project Proposal](#initial-project-proposal)
 
 ## Project Setup
 
