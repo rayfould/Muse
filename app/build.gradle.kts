@@ -4,16 +4,22 @@ import java.util.Properties // for ImgurAPI
 val imgurClientId: String by lazy {
     val properties = Properties()
     val localPropsFile = rootProject.file("local.properties")
-    if (localPropsFile.exists()) {
-        properties.load(localPropsFile.inputStream())
+    if (!localPropsFile.exists()) {
+        throw GradleException("local.properties not found. Please create it with IMGUR_CLIENT_ID.")
     }
-    properties.getProperty("IMGUR_CLIENT_ID") ?: "temp-imgur-id"
+    properties.load(localPropsFile.inputStream())
+    val clientId = properties.getProperty("IMGUR_CLIENT_ID")
+    if (clientId.isNullOrBlank()) {
+        throw GradleException("IMGUR_CLIENT_ID missing in local.properties. Please add it.")
+    }
+    clientId
 }
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -54,6 +60,9 @@ android {
 }
 
 dependencies {
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
     implementation("androidx.navigation:navigation-compose:2.7.6") // for navigation between different pages
     implementation("io.coil-kt:coil-compose:2.5.0") // For previewing images
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // For HTTP uploading to Imgur using ImgurAPI

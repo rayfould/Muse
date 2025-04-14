@@ -36,6 +36,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -44,6 +45,15 @@ import java.io.InputStream
 @Composable
 fun NewPostPage(navController: NavController, category: String) {
     val context = LocalContext.current
+
+    // Submission serializable class
+    @Serializable
+    data class Submission(
+        val user_id: Int,
+        val prompt_id: Int,
+        val content: String,
+        val image_url: String
+    )
 
     // For caption
     var postCaption by remember { mutableStateOf(TextFieldValue("")) }
@@ -74,6 +84,7 @@ fun NewPostPage(navController: NavController, category: String) {
         currImage = uri
         imgurImageURL = null
     }
+
 
     // Temp URI for camera capture
     val contentResolver = LocalContext.current.contentResolver
@@ -123,7 +134,7 @@ fun NewPostPage(navController: NavController, category: String) {
             .add("type", "base64") // Specify Base64 format
             .build()
         Log.d("SupabaseTest", "Request body size: ${requestBody.contentLength()} bytes")
-
+        Log.d("SupabaseTest", "Using Client-ID: ${BuildConfig.IMGUR_CLIENT_ID.take(8)}...") // Partial for safety
         val request = Request.Builder()
             // add Imgur endpoint for uploading image, required Authorization header for api call
             .header("Authorization", "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}")
@@ -261,14 +272,14 @@ fun NewPostPage(navController: NavController, category: String) {
                             .select(Columns.raw("id")) { filter { eq("auth_id", authId) } }
                             .decodeSingle<Map<String, Int>>() // Get user_id as integer
                         Log.d("SupabaseTest", "User response: $userResponse")
-                        val userId = userResponse["id"]
+                        val userId = userResponse["id"] ?: throw Exception("User ID not found in response")
                         val mockPromptId = 1 // Replace with real prompt ID later
                         SupabaseClient.client.postgrest.from("submissions").insert(
-                            mapOf(
-                                "user_id" to userId,
-                                "prompt_id" to mockPromptId,
-                                "content" to postCaption.text,
-                                "image_url" to url
+                            Submission(
+                                user_id = userId,
+                                prompt_id = mockPromptId,
+                                content = postCaption.text,
+                                image_url = url
                             )
                         )
                         imgurImageURL = "Post submitted successfully!" // Update UI with success message
