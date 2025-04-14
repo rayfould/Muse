@@ -1,21 +1,36 @@
 package com.example.creativecommunity.pages
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.width
 import androidx.navigation.NavController
+import com.example.creativecommunity.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 
+@Serializable
+data class Prompt(
+    val title: String
+)
 
 @Composable
 fun CategoryFeed(navController: NavController, category: String) {
@@ -32,7 +47,27 @@ fun CategoryFeed(navController: NavController, category: String) {
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(text = "This week's prompt: Paint a park near you!")
+        var promptTitle by remember { mutableStateOf("Loading prompt...") }
+
+        LaunchedEffect(category) {
+            try {
+                val prompt = withContext(Dispatchers.IO) {
+                    SupabaseClient.client.postgrest.from("prompts")
+                        .select(Columns.raw("title")) {
+                            filter {
+                                eq("category", category)
+                                eq("is_active", true)
+                            }
+                        }
+                        .decodeSingle<Prompt>()
+                }
+                promptTitle = "This week's prompt: ${prompt.title}"
+            } catch (e: Exception) {
+                promptTitle = "Failed to load prompt: ${e.message}"
+            }
+        }
+
+        Text(text = promptTitle)
 
         // Post composable
         // Example of a Post on our community feed
@@ -51,7 +86,7 @@ fun CategoryFeed(navController: NavController, category: String) {
         )
         //
 
-        Row(){
+        Row() {
             Button(
                 onClick = { navController.popBackStack() },
                 modifier = Modifier
@@ -72,4 +107,3 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 }
-
