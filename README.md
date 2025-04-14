@@ -1,8 +1,73 @@
-# Final Project Proposal – Muse: Creative Community Prompt App
+# Muse: Creative Community Prompt App
 
-**Here is our: [Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**
+**Technologies and Features:** Kotlin (Jetpack Compose in Android Studio), Supabase, ImgurAPI, Camera Sensor
 
 **Team Members:** Jeremy Lau, Rudolf Rissling
+
+**[Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**
+**[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**
+
+## Project Setup:
+
+MainActivity
+Navigation.kt
+SupabaseClient
+Pages (folder)
+|--> CategoryFeed.kt
+|--> Comment.kt
+|--> IndividualPostPage.kt
+|--> LoginPage.kt
+|--> MainPage.kt
+|--> NewPostPage.kt
+|--> Post.kt
+
+We are using NavHost and navController to manage user flow throughout our program. Our entry point is MainActivity.kt which calls AppNavigation in Navigation.kt which manages all of the routes within our app. 
+
+An example user flow:
+MainActivity.kt
+        ↓
+Navigation.kt
+        ↓
+LoginPage.kt - User either can create a new account or log into existing account
+        ↓
+MainPage.kt - User can select a creative category to explore, categories displayed as buttons
+        ↓
+CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage
+        ↓                                  ↓
+IndividualPostPage.kt                NewPostPage.kt
+
+**Notes:**
+Post.kt
+- A reusable template for displaying posts, used in CategoryFeed.kt and IndividualPostPage.kt
+Comment.kt
+- A reusable template for displaying comments, used in IndividualPostPage.kt
+NewPostPage.kt
+- Includes both options for uploading a photo or taking a photo using the camera sensor
+- ImgurAPI integration to upload the file to imgur for easy file storage, and we store the url to the Imgur photo in Supabase
+
+## API Setup:
+We are using ImgurAPI to efficiently handle large amounts of image uploads from users as we are building a creative community based on user photo submissions of their work.
+
+Notes about our setup:
+- We leverage local.properties to hide our Imgur API key
+- Make sure to create your own Imgur API key, and set it in local.properties file: e.g. IMGUR_CLIENT_ID= [YOUR API KEY]
+- We added internet access permission in our AndroidManifest file, and load our secret key through our build.gradle (app) file 
+
+## Database Setup:
+We are using Supabase as our database
+
+Interactions with database so far: 
+1. User account creation and registration, as well as logging in using an account
+2. Categories page connected to the categorical keys inside the dB, so that each post now links to its category key, and we can fetch them and sort them, etc
+3. Added submission storage into the dB. It now stores the image, links to the user and the prompt, stores date of creation, its category, etc
+4. Submission fetching into post feed
+5. Username and PFP fetching from the dB for the submissions
+
+Database Schema:
+![Database Image](database_schema_supabase.png)
+
+
+## Initial project proposal:
 
 ## 1. App Concept
 
