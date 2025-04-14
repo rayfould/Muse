@@ -21,7 +21,7 @@ Pages (folder)<br>
 |--> NewPostPage.kt<br>
 |--> Post.kt<br>
 
-We are using NavHost and navController to manage user flow throughout our program. Our entry point is MainActivity.kt which calls AppNavigation in Navigation.kt which manages all of the routes within our app. 
+We are using NavHost and navController to manage user flow throughout our program. Our entry point is MainActivity.kt which calls AppNavigation in Navigation.kt which manages all of the routes within our app. When we load a new page, we add it to the back stack, and to navigate back to the previous page, we use popBackStack() to pop off the most recent page to navigate back to the previous page. 
 
 An example user flow:<br>
 MainActivity.kt<br>
