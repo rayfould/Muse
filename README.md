@@ -25,16 +25,16 @@ We are using NavHost and navController to manage user flow throughout our progra
 
 An example user flow:<br>
 MainActivity.kt<br>
-`        ↓`<br>
+`    ↓`<br>
 Navigation.kt<br>
-        ↓<br>
+`    ↓`<br>
 LoginPage.kt - User either can create a new account or log into existing account<br>
-        ↓<br>
+`    ↓`<br>
 MainPage.kt - User can select a creative category to explore, categories displayed as buttons<br>
-        ↓<br>
+`    ↓`<br>
 CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage<br>
-        ↓                                  ↓<br>
-IndividualPostPage.kt                NewPostPage.kt<br>
+`       ↓                                    ↓`<br>
+IndividualPostPage.kt`                `NewPostPage.kt<br>
 
 **Notes:**
 Post.kt
