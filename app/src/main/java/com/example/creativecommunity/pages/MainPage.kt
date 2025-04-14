@@ -31,19 +31,29 @@ fun MainPage(navController: NavController) {
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Mock Category Buttons
-        val categories = listOf("Art", "Drawing", "Painting", "Graphic Design", "Knitting")
+        val categoryDisplayMap = mapOf(
+            "ART" to "Visual Arts",
+            "CODING" to "Programming",
+            "ENGINEERING" to "Engineering Projects",
+            "PHOTO" to "Photography",
+            "WRITING" to "Creative Writing",
+            "MUSIC" to "Music Creation",
+            "CRAFTS" to "Handmade Crafts",
+            "COOKING" to "Culinary Arts",
+            "FILM" to "Filmmaking",
+            "SCIENCE" to "Science Experiments"
+        )
 
-        categories.forEach { category ->
+        categoryDisplayMap.forEach { (key, displayName) ->
             Button(
                 onClick = {
-                    navController.navigate("category_feed/${category}")
+                    navController.navigate("category_feed/${key}")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
             ) {
-                Text(category)
+                Text(displayName)
             }
         }
     }

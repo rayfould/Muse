@@ -51,7 +51,8 @@ fun NewPostPage(navController: NavController, category: String) {
         val user_id: Int,
         val prompt_id: Int,
         val content: String,
-        val image_url: String
+        val image_url: String,
+        val category: String
     )
 
     // For caption
@@ -279,7 +280,8 @@ fun NewPostPage(navController: NavController, category: String) {
                                 user_id = userId,
                                 prompt_id = mockPromptId,
                                 content = postCaption.text,
-                                image_url = url
+                                image_url = url,
+                                category = category
                             )
                         )
                         imgurImageURL = "Post submitted successfully!" // Update UI with success message
