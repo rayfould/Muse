@@ -66,6 +66,12 @@ Interactions with database so far:
 Database Schema:
 ![Database Image](database_schema_supabase.png)
 
+## Multidevice Testing:
+Tested on:
+- Nexus 5 (API 30. Android 11.0 ("R")), portrait phone mode
+- Pixel Fold (API 36), tablet landscape mode
+
+Notes: visually appealing UI design on both devices in both orientations, functionality remains the same.
 
 ## Initial project proposal:
 
