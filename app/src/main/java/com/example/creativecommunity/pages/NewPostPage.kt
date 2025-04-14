@@ -40,7 +40,6 @@ import kotlinx.serialization.Serializable
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.InputStream
 
 @Composable
 fun NewPostPage(navController: NavController, category: String) {
@@ -111,8 +110,9 @@ fun NewPostPage(navController: NavController, category: String) {
     suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
         // Access android file system to read the image data
         val contentResolver = context.contentResolver
-        val inputStream: InputStream? = contentResolver.openInputStream(imageUri)
-        val bytes = inputStream?.readBytes()
+        val bytes = contentResolver.openInputStream(imageUri)?.use { stream ->
+            stream.readBytes()
+        }
         if (bytes == null) {
             Log.e("SupabaseTest", "Failed to read image bytes from URI: $imageUri")
             return@withContext null
