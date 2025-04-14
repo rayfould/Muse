@@ -1,5 +1,6 @@
 package com.example.creativecommunity.pages
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,13 +29,12 @@ import coil.compose.AsyncImage
 fun Post(
     profileImage: String,
     username: String,
-
     postImage: String,
     caption: String,
-
     likeCount: Int,
     commentCount: Int,
-    onCommentClicked: () -> Unit = {} // --> create a comment....? create this action later
+    onCommentClicked: () -> Unit = {}, // --> create a comment....? create this action later
+    onProfileClick: () -> Unit = {} // Add this parameter
 ) {
     var liked by remember { mutableStateOf(false) }
     var likeCount by remember { mutableStateOf(likeCount) }
@@ -56,6 +56,7 @@ fun Post(
                     .height(40.dp)
                     .width(40.dp)
                     .clip(CircleShape)
+                    .clickable { onProfileClick() }
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(text = username)
