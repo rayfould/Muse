@@ -102,89 +102,84 @@ fun NewPostPage(navController: NavController, category: String) {
         val contentResolver = context.contentResolver
         val inputStream: InputStream? = contentResolver.openInputStream(imageUri)
         val bytes = inputStream?.readBytes()
-        //Add logger
         if (bytes == null) {
             Log.e("SupabaseTest", "Failed to read image bytes from URI: $imageUri")
             return@withContext null
-    }
+        }
+        Log.d("SupabaseTest", "Image bytes read: ${bytes.size / 1024} KB")
 
-        // convert to a datatype for transfer of data to imgur
-        val base64Image = Base64.encodeToString(bytes, Base64.DEFAULT)
+        // Convert to Base64 with NO_WRAP
+        val base64Image = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        if (base64Image.isEmpty()) {
+            Log.e("SupabaseTest", "Base64 encoding failed: empty string")
+            return@withContext null
+        }
+        Log.d("SupabaseTest", "Base64 length: ${base64Image.length}, Sample: ${base64Image.take(50)}...")
 
-        // create new HTTP request
-//https://stackoverflow.com/questions/56893945/how-to-use-okhttp-to-make-a-post-request-in-kotlin
-    //  val okHttpClient = OkHttpClient()
-    //  val requestBody = payload.toRequestBody()
-    //  val request = Request.Builder()
-    //       .post(requestBody)
-    //       .url("url")
-    //       .build()
+        // Create HTTP request
         val okHttpClient = OkHttpClient()
         val requestBody = FormBody.Builder()
             .add("image", base64Image)
-//            .post(requestBody)
-//            .url("url")
+            .add("type", "base64") // Specify Base64 format
             .build()
+        Log.d("SupabaseTest", "Request body size: ${requestBody.contentLength()} bytes")
 
-        // POST request - https://stackoverflow.com/questions/56893945/how-to-use-okhttp-to-make-a-post-request-in-kotlin
-        //val request = Request.Builder()
-        //        .post(requestBody)
-        //        .url("url")
-        //        .build()
         val request = Request.Builder()
             // add Imgur endpoint for uploading image, required Authorization header for api call
-            .header("Authorization", "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}") // insert client id - USING FROM LOCAL PROPERTIES
-
-            // regular post request
+            .header("Authorization", "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("User-Agent", "MuseApp/1.0") // Add User-Agent to avoid server suspicion
             .post(requestBody)
             .url("https://api.imgur.com/3/image")
             .build()
+        Log.d("SupabaseTest", "Request headers: ${request.headers}")
+        Log.d("SupabaseTest", "Request URL: ${request.url}")
 
         // https://apidocs.imgur.com/
         val response = okHttpClient.newCall(request).execute() // makes a HTTP call
-        //Add fai logs
+        val responseBody = response.body?.string() ?: ""
         if (!response.isSuccessful) {
             Log.e("SupabaseTest", "Imgur upload failed: ${response.code} - ${response.message}")
-            Log.e("SupabaseTest", "Response body: ${response.body?.string()}")
+            Log.e("SupabaseTest", "Response body: $responseBody")
+            Log.d("SupabaseTest", "Response headers: ${response.headers}")
             return@withContext null
-    }
+        }
+        Log.d("SupabaseTest", "Response body: $responseBody")
 
         // extract json response from imgur fetch
-//        val json = response.body?.string()
-//        val linkRegex = """"link":"(.*?)"""".toRegex()
-//        return@withContext linkRegex.find(json ?: "")?.groups?.get(1)?.value?.replace("\\/", "/")
+        //        val json = response.body?.string()
+        //        val linkRegex = """"link":"(.*?)"""".toRegex()
+        //        return@withContext linkRegex.find(json ?: "")?.groups?.get(1)?.value?.replace("\\/", "/")
 
-        // get response as a string if possible
-        val responseFromImgur = response.body?.string() ?: ""
         // creates matching regex for looking for a link - like how used to do in python
         val linkRegex = """"link":"(.*?)"""".toRegex()
-    // example response from Imgur parsing with regex
-    // val json = """
-    //{
-    //  "data": {
-    //    "id": "abc123",
-    //    "title": null,
-    //    "description": null,
-    //    "datetime": 1641234567,
-    //    "type": "image/jpeg",
-    //    "animated": false,
-    //    "width": 1024,
-    //    "height": 768,
-    //    "size": 123456,
-    //    "views": 0,
-    //    "bandwidth": 0,
-    //    "deletehash": "XYZ789",
-    //    "link": "https:\/\/i.imgur.com\/abc123.jpg"            <----
-    //  },
-    //  "success": true,
-    //  "status": 200
-    //}
-        val matchResult = linkRegex.find(responseFromImgur) // apply the regex to the link response
+        // example response from Imgur parsing with regex
+        // val json = """
+        //{
+        //  "data": {
+        //    "id": "abc123",
+        //    "title": null,
+        //    "description": null,
+        //    "datetime": 1641234567,
+        //    "type": "image/jpeg",
+        //    "animated": false,
+        //    "width": 1024,
+        //    "height": 768,
+        //    "size": 123456,
+        //    "views": 0,
+        //    "bandwidth": 0,
+        //    "deletehash": "XYZ789",
+        //    "link": "https:\/\/i.imgur.com\/abc123.jpg"            <----
+        //  },
+        //  "success": true,
+        //  "status": 200
+        //}
+        val matchResult = linkRegex.find(responseBody) // apply the regex to the link response
         val fetchedLink = matchResult?.groups?.get(1)?.value // gets actual link from matchResult
         val actualLink = fetchedLink?.replace("\\/", "/") // remove all escape keys
         //Log link issues
         if (actualLink == null) {
-            Log.e("SupabaseTest", "Failed to extract link from Imgur response")
+            Log.e("SupabaseTest", "Failed to extract link from Imgur response: $responseBody")
         }
         return@withContext actualLink // 'return' is not allowed here - made me add @withContext
     }
@@ -255,29 +250,35 @@ fun NewPostPage(navController: NavController, category: String) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // launch coroutine to upload image to imgur
-        // launch coroutine to upload image to imgur
         if (shouldUpload && currImage != null) { // MAKE SURE POST button clicked AND an image is actually selected
             LaunchedEffect(currImage) { // coroutine
-                val url = uploadImageToImgur(currImage!!) // upload to imgur if currImage not null
-                if (url != null) {
-                    val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id // UUID from auth.users
-                    val userResponse = SupabaseClient.client.postgrest.from("users")
-                        .select(Columns.raw("id")) { filter { eq("auth_id", authId) } }
-                        .decodeSingle<Map<String, Int>>() // Get user_id as integer
-                    val userId = userResponse["id"]
-                    val mockPromptId = 1 // Replace with real prompt ID later
-                    SupabaseClient.client.postgrest.from("submissions").insert(
-                        mapOf(
-                            "user_id" to userId,
-                            "prompt_id" to mockPromptId,
-                            "content" to postCaption.text,
-                            "image_url" to url
+                try {
+                    val url = uploadImageToImgur(currImage!!) // upload to imgur if currImage not null
+                    if (url != null) {
+                        val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id // UUID from auth.users
+                        Log.d("SupabaseTest", "Auth ID: $authId")
+                        val userResponse = SupabaseClient.client.postgrest.from("users")
+                            .select(Columns.raw("id")) { filter { eq("auth_id", authId) } }
+                            .decodeSingle<Map<String, Int>>() // Get user_id as integer
+                        Log.d("SupabaseTest", "User response: $userResponse")
+                        val userId = userResponse["id"]
+                        val mockPromptId = 1 // Replace with real prompt ID later
+                        SupabaseClient.client.postgrest.from("submissions").insert(
+                            mapOf(
+                                "user_id" to userId,
+                                "prompt_id" to mockPromptId,
+                                "content" to postCaption.text,
+                                "image_url" to url
+                            )
                         )
-                    )
-                    imgurImageURL = "Post submitted successfully!" // Update UI with success message
-                } else {
-                    imgurImageURL = "Upload failed - try again later" // More informative message
-                    Log.e("SupabaseTest", "Post failed due to Imgur rate limit or other issue")
+                        imgurImageURL = "Post submitted successfully!" // Update UI with success message
+                    } else {
+                        imgurImageURL = "Upload failed - try again later" // More informative message
+                        Log.e("SupabaseTest", "Post failed: Imgur returned null URL")
+                    }
+                } catch (e: Exception) {
+                    imgurImageURL = "Error: ${e.message}" // Show error in UI
+                    Log.e("SupabaseTest", "Upload crashed", e)
                 }
                 shouldUpload = false // prevent infinite loop for uploading, stop after image uploaded
                 currentlyUploading = false // reset the button functionality --> redisplay "Post to Community" instead of uploading... forever
