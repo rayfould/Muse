@@ -25,7 +25,7 @@ We are using NavHost and navController to manage user flow throughout our progra
 
 An example user flow:<br>
 MainActivity.kt<br>
-        ↓<br>
+`        ↓`<br>
 Navigation.kt<br>
         ↓<br>
 LoginPage.kt - User either can create a new account or log into existing account<br>
