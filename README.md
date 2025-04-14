@@ -7,7 +7,15 @@
 **[Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**<br>
 **[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**
 
-## Project Setup:
+
+## Table of Contents:
+- [Project Setup](#introduction)
+- [API Setup](#installation)
+- [Database Setup](#usage)
+- [Multidevice Testing](#contributing)
+- [Initial Project Proposal](#license)
+
+## Project Setup
 
 MainActivity<br>
 Navigation.kt<br>
@@ -45,7 +53,7 @@ NewPostPage.kt
 - Includes both options for uploading a photo or taking a photo using the camera sensor
 - ImgurAPI integration to upload the file to imgur for easy file storage, and we store the url to the Imgur photo in Supabase
 
-## API Setup:
+## API Setup
 We are using ImgurAPI to efficiently handle large amounts of image uploads from users as we are building a creative community based on user photo submissions of their work.
 
 Notes about our setup:
@@ -53,7 +61,7 @@ Notes about our setup:
 - Make sure to create your own Imgur API key, and set it in local.properties file: e.g. IMGUR_CLIENT_ID= [YOUR API KEY]
 - We added internet access permission in our AndroidManifest file, and load our secret key through our build.gradle (app) file 
 
-## Database Setup:
+## Database Setup
 We are using Supabase as our database
 
 Interactions with database so far: 
@@ -66,14 +74,15 @@ Interactions with database so far:
 Database Schema:
 ![Database Image](database_schema_supabase.png)
 
-## Multidevice Testing:
+## Multidevice Testing
 Tested on:
 - Nexus 5 (API 30. Android 11.0 ("R")), portrait phone mode
 - Pixel Fold (API 36), tablet landscape mode
 
 Notes: visually appealing UI design on both devices in both orientations, functionality remains the same.
 
-## Initial project proposal:
+
+## Initial Project Proposal
 
 ## 1. App Concept
 
