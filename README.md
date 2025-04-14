@@ -4,37 +4,37 @@
 
 **Team Members:** Jeremy Lau, Rudolf Rissling
 
-**[Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**
+**[Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**<br>
 **[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**
 
 ## Project Setup:
 
-MainActivity
-Navigation.kt
-SupabaseClient
-Pages (folder)
-|--> CategoryFeed.kt
-|--> Comment.kt
-|--> IndividualPostPage.kt
-|--> LoginPage.kt
-|--> MainPage.kt
-|--> NewPostPage.kt
-|--> Post.kt
+MainActivity<br>
+Navigation.kt<br>
+SupabaseClient<br>
+Pages (folder)<br>
+|--> CategoryFeed.kt<br>
+|--> Comment.kt<br>
+|--> IndividualPostPage.kt<br>
+|--> LoginPage.kt<br>
+|--> MainPage.kt<br>
+|--> NewPostPage.kt<br>
+|--> Post.kt<br>
 
 We are using NavHost and navController to manage user flow throughout our program. Our entry point is MainActivity.kt which calls AppNavigation in Navigation.kt which manages all of the routes within our app. 
 
-An example user flow:
-MainActivity.kt
-        ↓
-Navigation.kt
-        ↓
-LoginPage.kt - User either can create a new account or log into existing account
-        ↓
-MainPage.kt - User can select a creative category to explore, categories displayed as buttons
-        ↓
-CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage
-        ↓                                  ↓
-IndividualPostPage.kt                NewPostPage.kt
+An example user flow:<br>
+MainActivity.kt<br>
+        ↓<br>
+Navigation.kt<br>
+        ↓<br>
+LoginPage.kt - User either can create a new account or log into existing account<br>
+        ↓<br>
+MainPage.kt - User can select a creative category to explore, categories displayed as buttons<br>
+        ↓<br>
+CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage<br>
+        ↓                                  ↓<br>
+IndividualPostPage.kt                NewPostPage.kt<br>
 
 **Notes:**
 Post.kt
