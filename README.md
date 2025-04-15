@@ -78,19 +78,19 @@ Database Schema:
 ## Multidevice Testing
 Tested on:
 - Nexus 5 (API 30. Android 11.0 ("R")), portrait phone mode
-- Pixel Fold (API 36), tablet landscape mode
+- Pixel Tablet (API 36), tablet landscape mode
 
 Notes: visually appealing UI design on both devices in both orientations, functionality remains the same.
 
 ## Challenges
 - ImgurAPI integration
   - Kept running into errors
-  - Trouble abstracting away our hidden key, initially we were able to use the key directly in our code, but to protect our API key for best practices, we needed to load it from our local properties and configure it using build.gradle - this took a bit of time to set up for both of us since we were trying different approaches
+  - Trouble abstracting away our hidden key, initially we were able to use the key directly in our code, but to protect our API key for best practices, we needed to load it from our local properties and configure it using build.gradle - this took a bit of time to set up for both of us since we were trying different approaches. Once one of us figured this part out we pushed it and the other pulled so we were working with the same version of code. 
 - Supabase setup
   - Designing and thinking out all the relationships between all of the data models/tables took a lot of time
   - Looking at our project in smaller sections and creating flow diagrams of how our users would use our app allowed us to identify different models and how they should be related to one another
 - Camera sensor
-  - Took some time to set up - resolved using forums, documentation, etc. 
+  - Took some time to set up - resolved using forums, documentation, etc.
 
 
 ## Initial Project Proposal
