@@ -1,6 +1,5 @@
 package com.example.creativecommunity.pages
 
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -43,8 +42,7 @@ fun LoginPage(navController: NavController) {
     val scope = rememberCoroutineScope()
 
     val configuration = LocalConfiguration.current
-    val landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
+    val landscape = configuration.screenWidthDp > 600
     val columnModifier = if (landscape) {
         Modifier.padding(20.dp) // no fillMaxSize in landscape
     } else {
