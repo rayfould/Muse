@@ -22,8 +22,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.creativecommunity.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -54,8 +57,19 @@ fun LoginPage(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     )
-    // Email and Password fields
+    // Title
     {
+        Text(
+            text = "Muse",
+            style = MaterialTheme.typography.headlineLarge.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 40.sp
+            ),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 32.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+        // Email and Password fields
         TextField(
             value = email,
             onValueChange = { email = it },
