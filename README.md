@@ -13,6 +13,7 @@
 - [API Setup](#api-setup)
 - [Database Setup](#database-setup)
 - [Multidevice Testing](#multidevice-testing)
+- [Challenges](#challenges)
 - [Initial Project Proposal](#initial-project-proposal)
 
 ## Project Setup
@@ -80,6 +81,16 @@ Tested on:
 - Pixel Fold (API 36), tablet landscape mode
 
 Notes: visually appealing UI design on both devices in both orientations, functionality remains the same.
+
+## Challenges
+- ImgurAPI integration
+  - Kept running into errors
+  - Trouble abstracting away our hidden key, initially we were able to use the key directly, but to make this as 
+- Supabase setup
+  - Designing and thinking out all the relationships between all of the data models/tables took a lot of time
+  - Looking at our project in smaller sections and creating flow diagrams of how our users would use our app allowed us to identify different models and how they should be related to one another
+- Camera sensor
+  - Took some time to set up - resolved using forums, documentation, etc. 
 
 
 ## Initial Project Proposal
