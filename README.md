@@ -85,7 +85,7 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 ## Challenges
 - ImgurAPI integration
   - Kept running into errors
-  - Trouble abstracting away our hidden key, initially we were able to use the key directly, but to make this as 
+  - Trouble abstracting away our hidden key, initially we were able to use the key directly in our code, but to protect our API key for best practices, we needed to load it from our local properties and configure it using build.gradle - this took a bit of time to set up for both of us since we were trying different approaches
 - Supabase setup
   - Designing and thinking out all the relationships between all of the data models/tables took a lot of time
   - Looking at our project in smaller sections and creating flow diagrams of how our users would use our app allowed us to identify different models and how they should be related to one another
