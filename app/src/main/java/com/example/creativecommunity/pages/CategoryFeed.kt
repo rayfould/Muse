@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.UserData
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
@@ -46,12 +47,6 @@ data class FeedSubmission(
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("users") val user: UserData
-)
-
-@Serializable
-data class UserData(
-    @SerialName("profile_image") val profile_image: String? = null,
-    @SerialName("username") val username: String? = "Unknown User"
 )
 
 @Composable

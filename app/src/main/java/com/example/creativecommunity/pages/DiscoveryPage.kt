@@ -1,16 +1,198 @@
 package com.example.creativecommunity.pages
 
+import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.UserData
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class DiscoverySubmission(
+    @SerialName("image_url") val image_url: String,
+    @SerialName("content") val content: String,
+    @SerialName("category") val category: String,
+    @SerialName("users") val user: UserData
+)
 
 @Composable
 fun DiscoveryPage(navController: NavController) {
+    var showSortDropdown by remember { mutableStateOf(false) }
+    var selectedSortOption by remember { mutableStateOf("Recent") }
+
     Box(
-        modifier = androidx.compose.ui.Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(15.dp)
     ) {
-        Text("Discovery Page")
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 80.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 30.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Discover")
+                
+                Box {
+                    Button(onClick = { showSortDropdown = true }) {
+                        Text("Sort by: $selectedSortOption")
+                    }
+                    
+                    DropdownMenu(
+                        expanded = showSortDropdown,
+                        onDismissRequest = { showSortDropdown = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Recent") },
+                            onClick = {
+                                selectedSortOption = "Recent"
+                                showSortDropdown = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Most Liked") },
+                            onClick = {
+                                selectedSortOption = "Most Liked"
+                                showSortDropdown = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Recommended") },
+                            onClick = {
+                                selectedSortOption = "Recommended"
+                                showSortDropdown = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Random") },
+                            onClick = {
+                                selectedSortOption = "Random"
+                                showSortDropdown = false
+                            }
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+
+            var submissions by remember { mutableStateOf<List<DiscoverySubmission>>(emptyList()) }
+            var fetchError by remember { mutableStateOf<String?>(null) }
+
+            var showPfpDialog by remember { mutableStateOf(false) }
+            var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
+
+            if (showPfpDialog && selectedPfpUrl != null) {
+                Dialog(onDismissRequest = { showPfpDialog = false }) {
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AsyncImage(
+                            model = selectedPfpUrl,
+                            contentDescription = "Enlarged profile picture",
+                            modifier = Modifier
+                                .size(500.dp)
+                                .clickable { showPfpDialog = false }
+                        )
+                    }
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                try {
+                    val fetchedSubmissions = withContext(Dispatchers.IO) {
+                        val result = SupabaseClient.client.postgrest.from("submissions")
+                            .select(Columns.raw("image_url, content, category, user_id, users!inner(profile_image, username)")) {
+                                order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                                limit(20)  // Limit to 20 most recent submissions
+                            }
+                        val submissionsList = result.decodeList<DiscoverySubmission>()
+                        Log.d("SupabaseTest", "Fetched submissions: $submissionsList")
+                        submissionsList
+                    }
+                    submissions = fetchedSubmissions
+                } catch (e: Exception) {
+                    fetchError = "Failed to load submissions: ${e.message}"
+                }
+            }
+
+            val defaultProfileImages = listOf(
+                "https://i.imgur.com/DyFZblf.jpeg", // Gray square
+                "https://i.imgur.com/kcbZfpx.png", // Smiley face
+                "https://i.imgur.com/WvDsY4x.jpeg", // Simple avatar silhouette
+                "https://i.imgur.com/iCy2JU1.jpeg", // Minimalist user icon
+                "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
+            )
+
+            if (fetchError != null) {
+                Text(text = fetchError!!)
+            } else if (submissions.isEmpty()) {
+                Text(text = "No submissions yet.")
+            } else {
+                LazyColumn {
+                    items(submissions) { submission ->
+                        val defaultPfp = remember { submission.user.profile_image ?: defaultProfileImages.random() }
+                        Post(
+                            profileImage = defaultPfp,
+                            username = submission.user.username ?: "Unknown User",
+                            postImage = submission.image_url,
+                            caption = "${submission.content}\n\nCategory: ${submission.category}",
+                            likeCount = 0,
+                            commentCount = 0,
+                            onCommentClicked = {
+                                navController.navigate("individual_post")
+                            },
+                            onProfileClick = {
+                                selectedPfpUrl = defaultPfp
+                                showPfpDialog = true
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
     }
 } 
