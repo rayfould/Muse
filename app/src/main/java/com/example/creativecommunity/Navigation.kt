@@ -33,7 +33,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         ) { paddingValues ->
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                NavHost(navController = navController, startDestination = "main") {
+                NavHost(navController = navController, startDestination = "login") {
+                    composable("login") { LoginPage(navController) }
                     composable("main") { MainPage(navController) }
                     composable("discovery") { DiscoveryPage(navController) }
                     composable("profile") { ProfilePage(navController) }
