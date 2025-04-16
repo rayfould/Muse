@@ -97,7 +97,14 @@ fun LoginPage(navController: NavController) {
                                     put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
                                 }
                             }
-                            message = "Signup successful!"
+                            // Automatically log in after successful signup
+                            SupabaseClient.client.auth.signInWith(Email) {
+                                this.email = email
+                                this.password = password
+                            }
+                            navController.navigate("main") {
+                                popUpTo("login") { inclusive = true } // Clear login from back stack
+                            }
                         } else {
                             SupabaseClient.client.auth.signInWith(Email) {
                                 this.email = email
