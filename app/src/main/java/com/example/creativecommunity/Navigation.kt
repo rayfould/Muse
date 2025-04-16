@@ -22,31 +22,81 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
-    val currentRoute = navController.currentBackStackEntry?.destination?.route
-
-    if (currentRoute == "login") {
-        LoginPage(navController)
-    } else {
-        Scaffold(
-            bottomBar = {
-                BottomNavigationBar(navController = navController)
+    NavHost(navController = navController, startDestination = "login") {
+        composable("login") { 
+            LoginPage(navController) 
+        }
+        
+        composable("main") { 
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    MainPage(navController)
+                }
             }
-        ) { paddingValues ->
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                NavHost(navController = navController, startDestination = "login") {
-                    composable("login") { LoginPage(navController) }
-                    composable("main") { MainPage(navController) }
-                    composable("discovery") { DiscoveryPage(navController) }
-                    composable("profile") { ProfilePage(navController) }
-                    composable("new_post/{category}") { backStackEntry ->
-                        val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
-                        NewPostPage(navController, category)
-                    }
-                    composable("category_feed/{category}") { backStackEntry ->
-                        val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
-                        CategoryFeed(navController, category)
-                    }
-                    composable("individual_post") { IndividualPostPage(navController = navController) }
+        }
+        
+        composable("discovery") { 
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    DiscoveryPage(navController)
+                }
+            }
+        }
+        
+        composable("profile") { 
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    ProfilePage(navController)
+                }
+            }
+        }
+        
+        composable("new_post/{category}") { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    NewPostPage(navController, category)
+                }
+            }
+        }
+        
+        composable("category_feed/{category}") { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    CategoryFeed(navController, category)
+                }
+            }
+        }
+        
+        composable("individual_post") { 
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    IndividualPostPage(navController = navController)
                 }
             }
         }

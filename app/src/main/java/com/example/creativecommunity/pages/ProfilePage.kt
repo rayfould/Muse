@@ -22,6 +22,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -29,6 +30,14 @@ fun ProfilePage(navController: NavController) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    
+    // Editable fields
+    var editedUsername by remember { mutableStateOf("") }
+    var editedBio by remember { mutableStateOf("") }
+    var hasChanges by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         try {
@@ -41,10 +50,45 @@ fun ProfilePage(navController: NavController) {
                     .decodeSingle<UserProfile>()
             }
             userProfile = profile
+            editedUsername = profile.username
+            editedBio = profile.bio ?: ""
         } catch (e: Exception) {
             error = "Failed to load profile: ${e.message}"
         } finally {
             isLoading = false
+        }
+    }
+
+    // Watch for changes
+    LaunchedEffect(editedUsername, editedBio) {
+        hasChanges = editedUsername != userProfile?.username || editedBio != (userProfile?.bio ?: "")
+    }
+
+    fun saveChanges() {
+        scope.launch {
+            isSaving = true
+            try {
+                val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
+                withContext(Dispatchers.IO) {
+                    SupabaseClient.client.postgrest.from("users")
+                        .update({
+                            set("username", editedUsername)
+                            set("bio", editedBio)
+                        }) {
+                            filter { eq("auth_id", authId) }
+                        }
+                }
+                // Update local state
+                userProfile = userProfile?.copy(
+                    username = editedUsername,
+                    bio = editedBio
+                )
+                hasChanges = false
+            } catch (e: Exception) {
+                error = "Failed to save changes: ${e.message}"
+            } finally {
+                isSaving = false
+            }
         }
     }
 
@@ -78,20 +122,28 @@ fun ProfilePage(navController: NavController) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Username
-                Text(
-                    text = userProfile!!.username,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                OutlinedTextField(
+                    value = editedUsername,
+                    onValueChange = { 
+                        editedUsername = it
+                    },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Bio
-                Text(
-                    text = userProfile!!.bio ?: "No bio yet",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                OutlinedTextField(
+                    value = editedBio,
+                    onValueChange = { 
+                        editedBio = it
+                    },
+                    label = { Text("Bio") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    minLines = 3
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -150,6 +202,27 @@ fun ProfilePage(navController: NavController) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("About Us")
+                    }
+                }
+
+                // Save Changes Button (only shown when there are changes)
+                if (hasChanges) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Button(
+                        onClick = { saveChanges() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Save Changes")
+                        }
                     }
                 }
             }
