@@ -1,21 +1,29 @@
 package com.example.creativecommunity.pages
 
+import android.net.Uri
+import android.util.Base64
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.creativecommunity.BuildConfig
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.UserProfile
 import io.github.jan.supabase.auth.auth
@@ -24,6 +32,9 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 @Composable
 fun ProfilePage(navController: NavController) {
@@ -38,6 +49,81 @@ fun ProfilePage(navController: NavController) {
     var isSaving by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // For profile picture upload
+    var currImage by remember { mutableStateOf<Uri?>(null) }
+    var imgurImageURL by remember { mutableStateOf<String?>(null) }
+    var isUploadingPfp by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        currImage = uri
+        imgurImageURL = null
+    }
+
+    suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
+        val contentResolver = context.contentResolver
+        val bytes = contentResolver.openInputStream(imageUri)?.use { stream ->
+            stream.readBytes()
+        }
+        if (bytes == null) {
+            Log.e("SupabaseTest", "Failed to read image bytes from URI: $imageUri")
+            return@withContext null
+        }
+
+        val base64Image = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        if (base64Image.isEmpty()) {
+            Log.e("SupabaseTest", "Base64 encoding failed: empty string")
+            return@withContext null
+        }
+
+        val okHttpClient = OkHttpClient()
+        val requestBody = FormBody.Builder()
+            .add("image", base64Image)
+            .add("type", "base64")
+            .build()
+
+        val request = Request.Builder()
+            .header("Authorization", "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("User-Agent", "MuseApp/1.0")
+            .post(requestBody)
+            .url("https://api.imgur.com/3/image")
+            .build()
+
+        val response = okHttpClient.newCall(request).execute()
+        val responseBody = response.body?.string() ?: ""
+        if (!response.isSuccessful) {
+            Log.e("SupabaseTest", "Imgur upload failed: ${response.code} - ${response.message}")
+            return@withContext null
+        }
+
+        val linkRegex = """"link":"(.*?)"""".toRegex()
+        val matchResult = linkRegex.find(responseBody)
+        val fetchedLink = matchResult?.groups?.get(1)?.value
+        fetchedLink?.replace("\\/", "/")
+    }
+
+    LaunchedEffect(currImage) {
+        if (currImage != null && !isUploadingPfp) {
+            isUploadingPfp = true
+            try {
+                val url = uploadImageToImgur(currImage!!)
+                if (url != null) {
+                    imgurImageURL = url
+                    hasChanges = true
+                } else {
+                    error = "Failed to upload profile picture"
+                }
+            } catch (e: Exception) {
+                error = "Failed to upload profile picture: ${e.message}"
+            } finally {
+                isUploadingPfp = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -60,8 +146,10 @@ fun ProfilePage(navController: NavController) {
     }
 
     // Watch for changes
-    LaunchedEffect(editedUsername, editedBio) {
-        hasChanges = editedUsername != userProfile?.username || editedBio != (userProfile?.bio ?: "")
+    LaunchedEffect(editedUsername, editedBio, imgurImageURL) {
+        hasChanges = editedUsername != userProfile?.username || 
+                    editedBio != (userProfile?.bio ?: "") ||
+                    (imgurImageURL != null && imgurImageURL != userProfile?.profileImage)
     }
 
     fun saveChanges() {
@@ -74,6 +162,9 @@ fun ProfilePage(navController: NavController) {
                         .update({
                             set("username", editedUsername)
                             set("bio", editedBio)
+                            if (imgurImageURL != null) {
+                                set("profile_image", imgurImageURL)
+                            }
                         }) {
                             filter { eq("auth_id", authId) }
                         }
@@ -81,9 +172,11 @@ fun ProfilePage(navController: NavController) {
                 // Update local state
                 userProfile = userProfile?.copy(
                     username = editedUsername,
-                    bio = editedBio
+                    bio = editedBio,
+                    profileImage = imgurImageURL ?: userProfile?.profileImage
                 )
                 hasChanges = false
+                imgurImageURL = null
             } catch (e: Exception) {
                 error = "Failed to save changes: ${e.message}"
             } finally {
@@ -109,15 +202,40 @@ fun ProfilePage(navController: NavController) {
                 )
             }
             userProfile != null -> {
-                // Profile Picture
-                AsyncImage(
-                    model = userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg",
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                // Profile Picture with Edit Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box {
+                        AsyncImage(
+                            model = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        if (isUploadingPfp) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .align(Alignment.Center)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    IconButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        enabled = !isUploadingPfp
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Profile Picture"
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
