@@ -1,29 +1,15 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -35,9 +21,12 @@ import com.example.creativecommunity.models.UserData
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.random.Random
 
 @Serializable
 data class DiscoverySubmission(
@@ -51,6 +40,12 @@ data class DiscoverySubmission(
 fun DiscoveryPage(navController: NavController) {
     var showSortDropdown by remember { mutableStateOf(false) }
     var selectedSortOption by remember { mutableStateOf("Recent") }
+    var isLoading by remember { mutableStateOf(false) }
+    var submissions by remember { mutableStateOf<List<DiscoverySubmission>>(emptyList()) }
+    var shuffledSubmissions by remember { mutableStateOf<List<DiscoverySubmission>>(emptyList()) }
+    var fetchError by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
     Box(
         modifier = Modifier
@@ -74,7 +69,10 @@ fun DiscoveryPage(navController: NavController) {
                 Text(text = "Discover")
                 
                 Box {
-                    Button(onClick = { showSortDropdown = true }) {
+                    Button(
+                        onClick = { showSortDropdown = true },
+                        enabled = !isLoading
+                    ) {
                         Text("Sort by: $selectedSortOption")
                     }
                     
@@ -87,6 +85,12 @@ fun DiscoveryPage(navController: NavController) {
                             onClick = {
                                 selectedSortOption = "Recent"
                                 showSortDropdown = false
+                                isLoading = true
+                                coroutineScope.launch {
+                                    delay(300) // Small delay for animation
+                                    shuffledSubmissions = submissions
+                                    isLoading = false
+                                }
                             }
                         )
                         DropdownMenuItem(
@@ -108,15 +112,18 @@ fun DiscoveryPage(navController: NavController) {
                             onClick = {
                                 selectedSortOption = "Random"
                                 showSortDropdown = false
+                                isLoading = true
+                                coroutineScope.launch {
+                                    delay(300) // Small delay for animation
+                                    shuffledSubmissions = submissions.shuffled(Random(System.currentTimeMillis()))
+                                    isLoading = false
+                                }
                             }
                         )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
-
-            var submissions by remember { mutableStateOf<List<DiscoverySubmission>>(emptyList()) }
-            var fetchError by remember { mutableStateOf<String?>(null) }
 
             var showPfpDialog by remember { mutableStateOf(false) }
             var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
@@ -153,6 +160,7 @@ fun DiscoveryPage(navController: NavController) {
                         submissionsList
                     }
                     submissions = fetchedSubmissions
+                    shuffledSubmissions = fetchedSubmissions
                 } catch (e: Exception) {
                     fetchError = "Failed to load submissions: ${e.message}"
                 }
@@ -166,30 +174,54 @@ fun DiscoveryPage(navController: NavController) {
                 "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
             )
 
+            AnimatedVisibility(
+                visible = isLoading,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(48.dp)
+                )
+            }
+
             if (fetchError != null) {
                 Text(text = fetchError!!)
             } else if (submissions.isEmpty()) {
                 Text(text = "No submissions yet.")
             } else {
-                LazyColumn {
-                    items(submissions) { submission ->
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.animateContentSize()
+                ) {
+                    items(
+                        items = if (selectedSortOption == "Random") shuffledSubmissions else submissions,
+                        key = { it.image_url }
+                    ) { submission ->
                         val defaultPfp = remember { submission.user.profile_image ?: defaultProfileImages.random() }
-                        Post(
-                            profileImage = defaultPfp,
-                            username = submission.user.username ?: "Unknown User",
-                            postImage = submission.image_url,
-                            caption = "${submission.content}\n\nCategory: ${submission.category}",
-                            likeCount = 0,
-                            commentCount = 0,
-                            onCommentClicked = {
-                                navController.navigate("individual_post")
-                            },
-                            onProfileClick = {
-                                selectedPfpUrl = defaultPfp
-                                showPfpDialog = true
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        AnimatedVisibility(
+                            visible = !isLoading,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Post(
+                                profileImage = defaultPfp,
+                                username = submission.user.username ?: "Unknown User",
+                                postImage = submission.image_url,
+                                caption = "${submission.content}\n\nCategory: ${submission.category}",
+                                likeCount = 0,
+                                commentCount = 0,
+                                onCommentClicked = {
+                                    navController.navigate("individual_post")
+                                },
+                                onProfileClick = {
+                                    selectedPfpUrl = defaultPfp
+                                    showPfpDialog = true
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
