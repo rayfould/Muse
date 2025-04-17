@@ -13,21 +13,33 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.PostLike
+import com.example.creativecommunity.utils.LikeManager
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.launch
 
 // Individual post composable:
 // Write it here to reuse both in the feed and for individual post page
 @Composable
 fun Post(
+    postId: Int = 0, // Change to Int with default value 0
     profileImage: String,
     username: String,
     postImage: String,
@@ -37,8 +49,65 @@ fun Post(
     onCommentClicked: () -> Unit = {}, // --> create a comment....? create this action later
     onProfileClick: () -> Unit = {} // Add this parameter
 ) {
-    var liked by remember { mutableStateOf(false) }
-    var likeCount by remember { mutableStateOf(likeCount) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Create or get the LikeManager
+    val likeManager = remember { LikeManager(context) }
+    
+    // Get current user
+    val currentUser = remember { SupabaseClient.client.auth.currentUserOrNull() }
+    val userId = remember { currentUser?.id ?: "" }
+    
+    // State for likes
+    var isLiked by remember { mutableStateOf(false) }
+    var currentLikeCount by remember { mutableIntStateOf(likeCount) }
+    
+    // Check if the user has liked the post
+    LaunchedEffect(userId, postId) {
+        if (userId.isNotEmpty() && postId > 0) {
+            isLiked = likeManager.isPostLikedByUser(userId, postId)
+            // Get actual like count
+            currentLikeCount = likeManager.getLikeCount(postId)
+        }
+    }
+    
+    // Listen for real-time like updates
+    if (postId > 0) {
+        val likeUpdates by likeManager.likeUpdates.collectAsState(initial = null)
+        
+        LaunchedEffect(likeUpdates) {
+            likeUpdates?.let { update ->
+                if (update.postId == postId) {
+                    // Adjust like count based on real-time updates
+                    currentLikeCount += if (update.isLiked) 1 else -1
+                }
+            }
+        }
+    }
+    
+    // Handle like button press
+    val toggleLike = {
+        if (userId.isNotEmpty() && postId > 0) {
+            val newLikedState = !isLiked
+            isLiked = newLikedState
+            currentLikeCount += if (newLikedState) 1 else -1
+            
+            // Queue the like/unlike for batch processing
+            coroutineScope.launch {
+                likeManager.queueLike(userId, postId, newLikedState)
+            }
+        }
+    }
+    
+    // Flush pending likes when the component is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            coroutineScope.launch {
+                likeManager.flush()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -87,18 +156,11 @@ fun Post(
                 .padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = {
-                liked = !liked
-                if (liked){
-                    likeCount++
+            Button(onClick = toggleLike) {
+                if (isLiked) {
+                    Text("♥️ $currentLikeCount")
                 } else {
-                    likeCount--
-                }
-            }) {
-                if (liked){
-                    Text("♥️ $likeCount")
-                } else {
-                    Text("🤍 $likeCount")
+                    Text("🤍 $currentLikeCount")
                 }
             }
 

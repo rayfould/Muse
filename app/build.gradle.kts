@@ -66,6 +66,9 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.6") // for navigation between different pages
     implementation("io.coil-kt:coil-compose:2.5.0") // For previewing images
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // For HTTP uploading to Imgur using ImgurAPI
+    
+    // DataStore for persisting likes
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // Use the Supabase BOM to set the version for all modules
     implementation(platform("io.github.jan-tennert.supabase:bom:3.0.1"))
@@ -73,6 +76,7 @@ dependencies {
     // Supabase modules
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt") // Added for real-time like updates
 
     // Ktor dependencies for Supabase networking
     implementation("io.ktor:ktor-client-core:3.0.0")
