@@ -10,28 +10,25 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.Like
 import com.example.creativecommunity.models.LikeCount
+import com.example.creativecommunity.models.LikeUpdate
 import com.example.creativecommunity.models.PendingLikeAction
 import com.example.creativecommunity.models.PostLike
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.query.Columns
-import io.github.jan.supabase.realtime.PostgresAction
-import io.github.jan.supabase.realtime.channel
-import io.github.jan.supabase.realtime.postgresChangeFlow
-import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.postgrest.query.Count
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration.Companion.seconds
 
 // Extension property for DataStore
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "like_preferences")
@@ -42,19 +39,20 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "li
 class LikeManager(private val context: Context) {
     private val TAG = "LikeManager"
     private val PENDING_LIKES_KEY = stringPreferencesKey("pending_likes")
-    private val FLUSH_INTERVAL_MS = 10000L // 10 seconds
+    private val FLUSH_INTERVAL_MS = 5000L // Reduced to 5 seconds for faster updates
     
-    // In-memory queue for like operations
-    private val pendingLikes = ConcurrentHashMap<String, PostLike>()
+    // In-memory list for pending like operations
+    private val pendingLikes = mutableListOf<PendingLikeAction>()
     
-    // For real-time updates
-    private val _likeUpdates = MutableSharedFlow<PostLike>(replay = 0)
-    val likeUpdates: SharedFlow<PostLike> = _likeUpdates
+    // State flow to track the current state of post likes
+    private val _postLikes = MutableStateFlow<List<PostLike>>(emptyList())
+    val postLikes: StateFlow<List<PostLike>> = _postLikes.asStateFlow()
+    
+    // For like updates
+    private val _likeUpdates = MutableSharedFlow<LikeUpdate>(replay = 0)
+    val likeUpdates: SharedFlow<LikeUpdate> = _likeUpdates
     
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    
-    // Map to store which posts are liked by the current user
-    private val userLikedPosts = ConcurrentHashMap<String, Boolean>()
     
     init {
         // Start a periodic flush job
@@ -65,60 +63,11 @@ class LikeManager(private val context: Context) {
             // Then start the periodic flush
             while (true) {
                 delay(FLUSH_INTERVAL_MS)
-                flush()
-            }
-        }
-        
-        // Setup realtime listener for likes
-        setupRealtimeListener()
-    }
-    
-    private fun setupRealtimeListener() {
-        coroutineScope.launch {
-            try {
-                val channel = SupabaseClient.client.realtime.channel("public:likes")
-                
-                channel.postgresChangeFlow<PostgresAction.Insert>("public:likes") {
-                    // Filter only for inserts
-                }.collect { change ->
-                    val newLike = change.record as? Map<String, Any> ?: return@collect
-                    val postIdRaw = newLike["post_id"] ?: return@collect
-                    val userId = newLike["user_id"] as? String ?: return@collect
-                    
-                    // Convert postId to Int from any possible type (String, Number, etc.)
-                    val postId = when (postIdRaw) {
-                        is Number -> postIdRaw.toInt()
-                        is String -> postIdRaw.toIntOrNull() ?: return@collect
-                        else -> return@collect
-                    }
-                    
-                    // Only emit if it's not our own like
-                    if (!pendingLikes.containsKey("$userId:$postId")) {
-                        _likeUpdates.emit(PostLike(postId, true))
-                    }
+                try {
+                    flush()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error during periodic flush: ${e.message}", e)
                 }
-                
-                channel.postgresChangeFlow<PostgresAction.Delete>("public:likes") {
-                    // Filter only for deletes
-                }.collect { change ->
-                    val oldLike = change.oldRecord as? Map<String, Any> ?: return@collect
-                    val postIdRaw = oldLike["post_id"] ?: return@collect
-                    val userId = oldLike["user_id"] as? String ?: return@collect
-                    
-                    // Convert postId to Int from any possible type (String, Number, etc.)
-                    val postId = when (postIdRaw) {
-                        is Number -> postIdRaw.toInt()
-                        is String -> postIdRaw.toIntOrNull() ?: return@collect
-                        else -> return@collect
-                    }
-                    
-                    // Only emit if it's not our own unlike
-                    if (!pendingLikes.containsKey("$userId:$postId")) {
-                        _likeUpdates.emit(PostLike(postId, false))
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error setting up realtime listener: ${e.message}", e)
             }
         }
     }
@@ -127,34 +76,62 @@ class LikeManager(private val context: Context) {
      * Queue a like action for batched processing
      */
     fun queueLike(userId: String, postId: Int, isLiked: Boolean) {
-        val key = "$userId:$postId"
-        val postLike = PostLike(postId, isLiked)
+        Log.d(TAG, "Queueing ${if (isLiked) "like" else "unlike"} for post $postId by user $userId")
         
-        // Store in memory
-        pendingLikes[key] = postLike
+        // Create a pending action
+        val action = PendingLikeAction(
+            postId = postId,
+            userId = userId,
+            action = if (isLiked) "like" else "unlike",
+            timestamp = System.currentTimeMillis()
+        )
         
-        // Update local state immediately for optimistic UI
-        userLikedPosts[postId.toString()] = isLiked
-        
-        // Store in persistent storage in case app is killed
-        coroutineScope.launch {
-            storePendingLikes()
+        synchronized(pendingLikes) {
+            // Remove any pending actions for this post/user
+            pendingLikes.removeAll { it.postId == postId && it.userId == userId }
+            // Add the new action
+            pendingLikes.add(action)
         }
         
-        // Emit the event for UI updates
+        // Update our internal state immediately (optimistic update)
+        updateLikeState(postId, isLiked, true)
+        
+        // Emit the update for UI with ownUpdate flag to prevent double counting
         coroutineScope.launch {
-            _likeUpdates.emit(postLike)
+            _likeUpdates.emit(LikeUpdate(postId, isLiked, ownUpdate = true))
+            
+            // Store in persistent storage in case app is killed
+            saveQueue()
+            
+            // Force a flush immediately for this like action
+            try {
+                flush()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during immediate flush: ${e.message}", e)
+            }
         }
+    }
+    
+    // Helper to update the internal state
+    private fun updateLikeState(postId: Int, isLiked: Boolean, ownUpdate: Boolean) {
+        Log.d(TAG, "Updating like state for post $postId to isLiked=$isLiked (ownUpdate=$ownUpdate)")
+        _postLikes.value = _postLikes.value.filterNot { it.postId == postId } + 
+                          PostLike(postId, isLiked, System.currentTimeMillis(), ownUpdate)
     }
     
     /**
      * Get whether the post is liked by the current user
      */
     suspend fun isPostLikedByUser(userId: String, postId: Int): Boolean {
-        // Check local cache first
-        userLikedPosts[postId.toString()]?.let { return it }
+        // Check internal state first
+        _postLikes.value.find { it.postId == postId }?.let {
+            Log.d(TAG, "Using cached like state for post $postId: isLiked=${it.isLiked}")
+            return it.isLiked
+        }
         
+        // Otherwise query database
         return try {
+            Log.d(TAG, "Querying database for like status of post $postId for user $userId")
             val result = withContext(Dispatchers.IO) {
                 SupabaseClient.client.postgrest.from("likes")
                     .select {
@@ -167,7 +144,10 @@ class LikeManager(private val context: Context) {
             }
             
             val isLiked = result.isNotEmpty()
-            userLikedPosts[postId.toString()] = isLiked
+            Log.d(TAG, "Database result for post $postId: isLiked=$isLiked (${result.size} likes found)")
+            
+            // Update our internal state
+            updateLikeState(postId, isLiked, false)
             isLiked
         } catch (e: Exception) {
             Log.e(TAG, "Error checking if post is liked: ${e.message}", e)
@@ -180,16 +160,22 @@ class LikeManager(private val context: Context) {
      */
     suspend fun getLikeCount(postId: Int): Int {
         return try {
-            val result = withContext(Dispatchers.IO) {
+            Log.d(TAG, "Getting like count for post $postId")
+            
+            // Use a simpler approach - just get all likes for this post and count them
+            val likes = withContext(Dispatchers.IO) {
                 SupabaseClient.client.postgrest.from("likes")
-                    .select(Columns.raw("count(*)")) {
+                    .select {
                         filter {
                             eq("post_id", postId)
                         }
                     }
-                    .decodeSingle<LikeCount>()
+                    .decodeList<Like>()
             }
-            result.count
+            
+            val count = likes.size
+            Log.d(TAG, "Retrieved like count for post $postId: $count")
+            count
         } catch (e: Exception) {
             Log.e(TAG, "Error getting like count: ${e.message}", e)
             0
@@ -197,80 +183,176 @@ class LikeManager(private val context: Context) {
     }
     
     /**
-     * Flush pending likes to the database
+     * Refresh like status for multiple posts
      */
-    suspend fun flush() {
-        if (pendingLikes.isEmpty()) return
-        
-        // Group by action (like or unlike)
-        val likesToAdd = mutableListOf<Like>()
-        val likesToRemove = mutableListOf<Pair<String, Int>>() // user_id, post_id pairs
-        
-        pendingLikes.forEach { (key, postLike) ->
-            val parts = key.split(":")
-            val userId = parts[0]
-            val postId = parts[1].toInt()
-            
-            if (postLike.isLiked) {
-                likesToAdd.add(Like(userId = userId, postId = postId))
-            } else {
-                likesToRemove.add(userId to postId)
-            }
-        }
+    suspend fun refreshLikeStatus(userId: String, postIds: List<Int>) {
+        if (postIds.isEmpty()) return
         
         try {
-            // Process inserts
-            if (likesToAdd.isNotEmpty()) {
-                withContext(Dispatchers.IO) {
-                    SupabaseClient.client.postgrest.from("likes")
-                        .insert(likesToAdd)
-                }
-            }
+            Log.d(TAG, "Refreshing like status for ${postIds.size} posts")
             
-            // Process deletes
-            likesToRemove.forEach { (userId, postId) ->
-                withContext(Dispatchers.IO) {
-                    SupabaseClient.client.postgrest.from("likes")
-                        .delete {
-                            filter {
-                                eq("user_id", userId)
-                                eq("post_id", postId)
+            // Get all likes for these posts for this user - making individual calls for each post
+            val likedPosts = withContext(Dispatchers.IO) {
+                val result = mutableListOf<Like>()
+                
+                for (postId in postIds) {
+                    try {
+                        val likes = SupabaseClient.client.postgrest.from("likes")
+                            .select {
+                                filter {
+                                    eq("user_id", userId)
+                                    eq("post_id", postId)
+                                }
                             }
-                        }
+                            .decodeList<Like>()
+                        
+                        result.addAll(likes)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching like status for post $postId: ${e.message}")
+                    }
                 }
+                
+                result.map { it.postId }.toSet()
             }
             
-            // Clear the pending queue after successful flush
-            pendingLikes.clear()
-            // Clear from persistent storage too
-            context.dataStore.edit { preferences ->
-                preferences.remove(PENDING_LIKES_KEY)
+            // Update our internal state for all posts
+            postIds.forEach { postId ->
+                val isLiked = likedPosts.contains(postId)
+                updateLikeState(postId, isLiked, false)
             }
             
-            Log.d(TAG, "Successfully flushed ${likesToAdd.size} likes and ${likesToRemove.size} unlikes")
+            Log.d(TAG, "Successfully refreshed like status for ${postIds.size} posts")
         } catch (e: Exception) {
-            Log.e(TAG, "Error flushing likes: ${e.message}", e)
-            // Keep items in the queue to retry later
+            Log.e(TAG, "Error refreshing like status: ${e.message}", e)
         }
     }
     
-    private suspend fun storePendingLikes() {
-        val pendingActions = pendingLikes.map { (key, postLike) ->
-            val parts = key.split(":")
-            val userId = parts[0]
-            val postId = parts[1].toInt()
+    /**
+     * Check if a like already exists in the database
+     */
+    private suspend fun checkLikeExists(userId: String, postId: Int): Boolean {
+        return try {
+            withContext(Dispatchers.IO) {
+                val result = SupabaseClient.client.postgrest.from("likes")
+                    .select {
+                        filter {
+                            eq("user_id", userId)
+                            eq("post_id", postId)
+                        }
+                    }
+                    .decodeList<Like>()
+                
+                result.isNotEmpty()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking if like exists: ${e.message}", e)
+            false
+        }
+    }
+    
+    /**
+     * Flush pending likes to the database
+     */
+    suspend fun flush() {
+        if (pendingLikes.isEmpty()) {
+            Log.d(TAG, "No pending likes to flush")
+            return
+        }
+        
+        val actionsToProcess: List<PendingLikeAction>
+        synchronized(pendingLikes) {
+            actionsToProcess = pendingLikes.toList()
+            if (actionsToProcess.isEmpty()) return
+        }
+        
+        Log.d(TAG, "Flushing ${actionsToProcess.size} pending like actions")
+        
+        val successfulActions = mutableListOf<PendingLikeAction>()
+        
+        // Process one action at a time to better handle errors
+        for (action in actionsToProcess) {
+            try {
+                if (action.action == "like") {
+                    // Check if like already exists before inserting
+                    val exists = checkLikeExists(action.userId, action.postId)
+                    
+                    if (!exists) {
+                        withContext(Dispatchers.IO) {
+                            SupabaseClient.client.postgrest.from("likes")
+                                .insert(Like(userId = action.userId, postId = action.postId))
+                        }
+                        Log.d(TAG, "Successfully inserted like for post ${action.postId}")
+                    } else {
+                        Log.d(TAG, "Like already exists for post ${action.postId}, skipping insert")
+                    }
+                    
+                    // Mark as successful either way
+                    successfulActions.add(action)
+                } else {
+                    // Delete like
+                    withContext(Dispatchers.IO) {
+                        SupabaseClient.client.postgrest.from("likes")
+                            .delete {
+                                filter {
+                                    eq("user_id", action.userId)
+                                    eq("post_id", action.postId)
+                                }
+                            }
+                    }
+                    Log.d(TAG, "Successfully deleted like for post ${action.postId}")
+                    successfulActions.add(action)
+                }
+            } catch (e: Exception) {
+                if (e.message?.contains("duplicate key") == true) {
+                    // If it's a duplicate key error for a like action, consider it successful
+                    if (action.action == "like") {
+                        Log.d(TAG, "Like already exists (caught duplicate key), marking as successful")
+                        successfulActions.add(action)
+                    } else {
+                        Log.e(TAG, "Error processing unlike for post ${action.postId}: ${e.message}")
+                    }
+                } else {
+                    Log.e(TAG, "Error processing ${action.action} for post ${action.postId}: ${e.message}")
+                }
+            }
+        }
+        
+        // Remove processed actions from the pending queue
+        if (successfulActions.isNotEmpty()) {
+            synchronized(pendingLikes) {
+                pendingLikes.removeAll { action ->
+                    successfulActions.any { it === action }
+                }
+            }
             
-            PendingLikeAction(
-                postId = postId,
-                userId = userId,
-                action = if (postLike.isLiked) "like" else "unlike",
-                timestamp = postLike.timestamp
-            )
+            // Update storage
+            saveQueue()
+        }
+        
+        Log.d(TAG, "Successfully flushed ${successfulActions.size}/${actionsToProcess.size} like actions")
+        
+        // If some actions failed, verify our like states with the database
+        if (successfulActions.size < actionsToProcess.size) {
+            val postIds = actionsToProcess.map { it.postId }.distinct()
+            val userId = actionsToProcess.firstOrNull()?.userId
+            
+            if (userId != null && postIds.isNotEmpty()) {
+                Log.d(TAG, "Some actions failed, refreshing like status for ${postIds.size} posts")
+                refreshLikeStatus(userId, postIds)
+            }
+        }
+    }
+    
+    private suspend fun saveQueue() {
+        val pendingLikesCopy: List<PendingLikeAction>
+        synchronized(pendingLikes) {
+            pendingLikesCopy = pendingLikes.toList()
         }
         
         context.dataStore.edit { preferences ->
-            preferences[PENDING_LIKES_KEY] = Json.encodeToString(pendingActions)
+            preferences[PENDING_LIKES_KEY] = Json.encodeToString(pendingLikesCopy)
         }
+        Log.d(TAG, "Saved ${pendingLikesCopy.size} pending likes to persistent storage")
     }
     
     private suspend fun recoverPendingLikes() {
@@ -280,21 +362,26 @@ class LikeManager(private val context: Context) {
             }.first()
             
             if (pendingActionsJson.isNotEmpty()) {
-                val pendingActions = Json.decodeFromString<List<PendingLikeAction>>(pendingActionsJson)
+                val recoveredActions = Json.decodeFromString<List<PendingLikeAction>>(pendingActionsJson)
                 
-                pendingActions.forEach { action ->
-                    val key = "${action.userId}:${action.postId}"
-                    pendingLikes[key] = PostLike(
-                        postId = action.postId,
-                        isLiked = action.action == "like",
-                        timestamp = action.timestamp
-                    )
-                    
-                    // Also update local state
-                    userLikedPosts[action.postId.toString()] = action.action == "like"
+                synchronized(pendingLikes) {
+                    pendingLikes.clear()
+                    pendingLikes.addAll(recoveredActions)
                 }
                 
-                Log.d(TAG, "Recovered ${pendingActions.size} pending like actions")
+                // Also update internal state
+                pendingLikes.groupBy { it.postId }
+                    .forEach { (postId, actions) ->
+                        // Take the most recent action for each post
+                        val mostRecentAction = actions.maxByOrNull { it.timestamp }
+                        mostRecentAction?.let {
+                            updateLikeState(postId, it.action == "like", true)
+                        }
+                    }
+                
+                Log.d(TAG, "Recovered ${recoveredActions.size} pending like actions")
+            } else {
+                Log.d(TAG, "No pending like actions to recover")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error recovering pending likes: ${e.message}", e)

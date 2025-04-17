@@ -44,7 +44,7 @@ fun Post(
     username: String,
     postImage: String,
     caption: String,
-    likeCount: Int,
+    likeCount: Int, // Initial like count (only used if we can't fetch from DB)
     commentCount: Int,
     onCommentClicked: () -> Unit = {}, // --> create a comment....? create this action later
     onProfileClick: () -> Unit = {} // Add this parameter
@@ -61,14 +61,20 @@ fun Post(
     
     // State for likes
     var isLiked by remember { mutableStateOf(false) }
-    var currentLikeCount by remember { mutableIntStateOf(likeCount) }
-    
-    // Check if the user has liked the post
+    var currentLikeCount by remember { mutableIntStateOf(0) } // Start at 0 and load from DB
+    var hasLoadedInitialState by remember { mutableStateOf(false) }
+
+    // Initial data loading
     LaunchedEffect(userId, postId) {
         if (userId.isNotEmpty() && postId > 0) {
+            // Get actual like count first
+            val count = likeManager.getLikeCount(postId)
+            currentLikeCount = count
+            
+            // Then check if user has liked this post
             isLiked = likeManager.isPostLikedByUser(userId, postId)
-            // Get actual like count
-            currentLikeCount = likeManager.getLikeCount(postId)
+            
+            hasLoadedInitialState = true
         }
     }
     
@@ -77,10 +83,18 @@ fun Post(
         val likeUpdates by likeManager.likeUpdates.collectAsState(initial = null)
         
         LaunchedEffect(likeUpdates) {
-            likeUpdates?.let { update ->
-                if (update.postId == postId) {
-                    // Adjust like count based on real-time updates
-                    currentLikeCount += if (update.isLiked) 1 else -1
+            // Only process updates after we've loaded the initial state
+            if (hasLoadedInitialState) {
+                likeUpdates?.let { update ->
+                    if (update.postId == postId) {
+                        // Only adjust count for updates from other users
+                        // Our own updates are handled optimistically
+                        val isOwnUpdate = update.ownUpdate
+                        if (!isOwnUpdate) {
+                            // Adjust like count based on real-time updates
+                            currentLikeCount += if (update.isLiked) 1 else -1
+                        }
+                    }
                 }
             }
         }
@@ -91,6 +105,8 @@ fun Post(
         if (userId.isNotEmpty() && postId > 0) {
             val newLikedState = !isLiked
             isLiked = newLikedState
+            
+            // Update like count optimistically
             currentLikeCount += if (newLikedState) 1 else -1
             
             // Queue the like/unlike for batch processing

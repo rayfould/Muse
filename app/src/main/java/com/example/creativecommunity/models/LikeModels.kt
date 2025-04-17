@@ -21,7 +21,8 @@ data class LikeCount(
 data class PostLike(
     val postId: Int, // Changed from String to Int
     val isLiked: Boolean,  // true for like, false for unlike
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val ownUpdate: Boolean = false // Track if update is from current user
 )
 
 // For storing in local storage
@@ -31,4 +32,12 @@ data class PendingLikeAction(
     val userId: String,
     val action: String, // "like" or "unlike"
     val timestamp: Long
+)
+
+// For tracking like updates
+@Serializable
+data class LikeUpdate(
+    val postId: Int,
+    val isLiked: Boolean,
+    val ownUpdate: Boolean = false // Track if the update is from current user
 ) 
