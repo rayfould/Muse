@@ -18,7 +18,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
-import com.example.creativecommunity.models.UserData
+import com.example.creativecommunity.models.*
 import com.example.creativecommunity.utils.LikeManager
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -27,18 +27,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import java.text.SimpleDateFormat
+import java.util.Locale
+import kotlin.math.absoluteValue
 import kotlin.random.Random
-
-@Serializable
-data class DiscoveryPost(
-    val id: Int,
-    @SerialName("image_url") val image_url: String,
-    @SerialName("content") val content: String,
-    @SerialName("category") val category: String,
-    @SerialName("users") val user: UserData
-)
 
 // Data class to hold post with its like count for sorting
 data class PostWithLikes(
@@ -126,12 +118,13 @@ fun DiscoveryPage(navController: NavController) {
                             onClick = {
                                 selectedSortOption = "Recommended"
                                 showSortDropdown = false
-                                // For now, just use Recent sorting
                                 isLoading = true
                                 coroutineScope.launch {
-                                    delay(300) // Small delay for animation
-                                    displayedPosts = posts
-                                    isLoading = false
+                                    // Use our recommendation algorithm
+                                    fetchAndScorePosts(posts, likeManager) { recommendedPosts ->
+                                        displayedPosts = recommendedPosts
+                                        isLoading = false
+                                    }
                                 }
                             }
                         )
@@ -179,7 +172,7 @@ fun DiscoveryPage(navController: NavController) {
                 try {
                     val fetchedPosts = withContext(Dispatchers.IO) {
                         val result = SupabaseClient.client.postgrest.from("posts")
-                            .select(Columns.raw("id, image_url, content, category, user_id, users!inner(profile_image, username)")) {
+                            .select(Columns.raw("id, image_url, content, category, created_at, user_id, users!inner(profile_image, username)")) {
                                 order("created_at", Order.DESCENDING)
                                 limit(20)  // Limit to 20 most recent posts
                             }
@@ -275,4 +268,59 @@ private suspend fun fetchAndSortPostsByLikes(
     val sortedPosts = postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
     
     onComplete(sortedPosts)
+}
+
+// Function to fetch metrics, score and sort posts by the recommendation algorithm
+private suspend fun fetchAndScorePosts(
+    posts: List<DiscoveryPost>,
+    likeManager: LikeManager,
+    onComplete: (List<DiscoveryPost>) -> Unit
+) {
+    // First, collect like and comment counts for all posts
+    val postsWithCounts = mutableListOf<DiscoveryPostWithCounts>()
+    
+    for (post in posts) {
+        val likeCount = likeManager.getLikeCount(post.id)
+        // For simplicity, we'll generate random comment counts
+        // In a real app, you would fetch this from your database
+        val commentCount = (0..5).random() // Simplified for demo
+        
+        postsWithCounts.add(DiscoveryPostWithCounts(post, likeCount, commentCount))
+    }
+    
+    // Compute author engagement metrics
+    val authorEngagement = RecommendationEngine.computeAuthorEngagement(postsWithCounts)
+    
+    // Create metrics for each post and score them
+    val scoredPosts = postsWithCounts.map { postWithCounts ->
+        val username = postWithCounts.post.user.username ?: ""
+        val engagement = authorEngagement[username] ?: 0f
+        
+        // Convert timestamp string to long if available, or use current time
+        val createdAt = System.currentTimeMillis() // Default to current time
+        
+        val metrics = PostMetrics(
+            postId = postWithCounts.post.id,
+            likeCount = postWithCounts.likeCount,
+            commentCount = postWithCounts.commentCount,
+            authorEngagement = engagement,
+            createdAt = createdAt
+        )
+        
+        val score = RecommendationEngine.score(metrics)
+        ScoredPost(postWithCounts.post, metrics, score)
+    }
+    
+    // Sort by score (descending)
+    val recommendedPosts = scoredPosts.sortedByDescending { it.score }.map { it.post }
+    
+    // Log the scores for debugging
+    scoredPosts.sortedByDescending { it.score }.take(5).forEach { scoredPost ->
+        Log.d("Recommendation", "Post ${scoredPost.post.id} by ${scoredPost.post.user.username}: " +
+                "Score=${scoredPost.score}, Likes=${scoredPost.metrics.likeCount}, " +
+                "Comments=${scoredPost.metrics.commentCount}, " +
+                "AuthorEngagement=${scoredPost.metrics.authorEngagement}")
+    }
+    
+    onComplete(recommendedPosts)
 } 
