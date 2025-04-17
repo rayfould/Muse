@@ -52,8 +52,8 @@ fun Post(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
-    // Create or get the LikeManager
-    val likeManager = remember { LikeManager(context) }
+    // Get the LikeManager singleton instance
+    val likeManager = remember { LikeManager.getInstance(context) }
     
     // Get current user
     val currentUser = remember { SupabaseClient.client.auth.currentUserOrNull() }
