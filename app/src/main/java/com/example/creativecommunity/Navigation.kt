@@ -89,14 +89,15 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("individual_post") { 
+        composable("individual_post/{postId}") { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId") ?: ""
             Scaffold(
                 bottomBar = {
                     BottomNavigationBar(navController = navController)
                 }
             ) { paddingValues ->
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    IndividualPostPage(navController = navController)
+                    IndividualPostPage(navController = navController, postId = postId)
                 }
             }
         }

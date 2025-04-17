@@ -29,7 +29,8 @@ import kotlinx.serialization.Serializable
 import kotlin.random.Random
 
 @Serializable
-data class DiscoverySubmission(
+data class DiscoveryPost(
+    val id: String,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("category") val category: String,
@@ -41,8 +42,8 @@ fun DiscoveryPage(navController: NavController) {
     var showSortDropdown by remember { mutableStateOf(false) }
     var selectedSortOption by remember { mutableStateOf("Recent") }
     var isLoading by remember { mutableStateOf(false) }
-    var submissions by remember { mutableStateOf<List<DiscoverySubmission>>(emptyList()) }
-    var shuffledSubmissions by remember { mutableStateOf<List<DiscoverySubmission>>(emptyList()) }
+    var posts by remember { mutableStateOf<List<DiscoveryPost>>(emptyList()) }
+    var shuffledPosts by remember { mutableStateOf<List<DiscoveryPost>>(emptyList()) }
     var fetchError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -88,7 +89,7 @@ fun DiscoveryPage(navController: NavController) {
                                 isLoading = true
                                 coroutineScope.launch {
                                     delay(300) // Small delay for animation
-                                    shuffledSubmissions = submissions
+                                    shuffledPosts = posts
                                     isLoading = false
                                 }
                             }
@@ -115,7 +116,7 @@ fun DiscoveryPage(navController: NavController) {
                                 isLoading = true
                                 coroutineScope.launch {
                                     delay(300) // Small delay for animation
-                                    shuffledSubmissions = submissions.shuffled(Random(System.currentTimeMillis()))
+                                    shuffledPosts = posts.shuffled(Random(System.currentTimeMillis()))
                                     isLoading = false
                                 }
                             }
@@ -149,20 +150,20 @@ fun DiscoveryPage(navController: NavController) {
 
             LaunchedEffect(Unit) {
                 try {
-                    val fetchedSubmissions = withContext(Dispatchers.IO) {
-                        val result = SupabaseClient.client.postgrest.from("submissions")
-                            .select(Columns.raw("image_url, content, category, user_id, users!inner(profile_image, username)")) {
+                    val fetchedPosts = withContext(Dispatchers.IO) {
+                        val result = SupabaseClient.client.postgrest.from("posts")
+                            .select(Columns.raw("id, image_url, content, category, user_id, users!inner(profile_image, username)")) {
                                 order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
-                                limit(20)  // Limit to 20 most recent submissions
+                                limit(20)  // Limit to 20 most recent posts
                             }
-                        val submissionsList = result.decodeList<DiscoverySubmission>()
-                        Log.d("SupabaseTest", "Fetched submissions: $submissionsList")
-                        submissionsList
+                        val postsList = result.decodeList<DiscoveryPost>()
+                        Log.d("SupabaseTest", "Fetched posts: $postsList")
+                        postsList
                     }
-                    submissions = fetchedSubmissions
-                    shuffledSubmissions = fetchedSubmissions
+                    posts = fetchedPosts
+                    shuffledPosts = fetchedPosts
                 } catch (e: Exception) {
-                    fetchError = "Failed to load submissions: ${e.message}"
+                    fetchError = "Failed to load posts: ${e.message}"
                 }
             }
 
@@ -188,32 +189,33 @@ fun DiscoveryPage(navController: NavController) {
 
             if (fetchError != null) {
                 Text(text = fetchError!!)
-            } else if (submissions.isEmpty()) {
-                Text(text = "No submissions yet.")
+            } else if (posts.isEmpty()) {
+                Text(text = "No posts yet.")
             } else {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.animateContentSize()
                 ) {
                     items(
-                        items = if (selectedSortOption == "Random") shuffledSubmissions else submissions,
+                        items = if (selectedSortOption == "Random") shuffledPosts else posts,
                         key = { it.image_url }
-                    ) { submission ->
-                        val defaultPfp = remember { submission.user.profile_image ?: defaultProfileImages.random() }
+                    ) { post ->
+                        val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
                         AnimatedVisibility(
                             visible = !isLoading,
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
                             Post(
+                                postId = post.id,
                                 profileImage = defaultPfp,
-                                username = submission.user.username ?: "Unknown User",
-                                postImage = submission.image_url,
-                                caption = "${submission.content}\n\nCategory: ${submission.category}",
+                                username = post.user.username ?: "Unknown User",
+                                postImage = post.image_url,
+                                caption = "${post.content}\n\nCategory: ${post.category}",
                                 likeCount = 0,
                                 commentCount = 0,
                                 onCommentClicked = {
-                                    navController.navigate("individual_post")
+                                    navController.navigate("individual_post/${post.id}")
                                 },
                                 onProfileClick = {
                                     selectedPfpUrl = defaultPfp

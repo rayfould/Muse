@@ -43,7 +43,8 @@ data class Prompt(
 )
 
 @Serializable
-data class FeedSubmission(
+data class FeedPost(
+    val id: String,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("users") val user: UserData
@@ -91,7 +92,7 @@ fun CategoryFeed(navController: NavController, category: String) {
 
             Text(text = promptTitle)
 
-            var submissions by remember { mutableStateOf<List<FeedSubmission>>(emptyList()) }
+            var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
             var fetchError by remember { mutableStateOf<String?>(null) }
 
             var showPfpDialog by remember { mutableStateOf(false) }
@@ -118,22 +119,22 @@ fun CategoryFeed(navController: NavController, category: String) {
 
             LaunchedEffect(category) {
                 try {
-                    val fetchedSubmissions = withContext(Dispatchers.IO) {
-                        val result = SupabaseClient.client.postgrest.from("submissions")
-                            .select(Columns.raw("image_url, content, user_id, users!inner(profile_image, username)")) {
+                    val fetchedPosts = withContext(Dispatchers.IO) {
+                        val result = SupabaseClient.client.postgrest.from("posts")
+                            .select(Columns.raw("id, image_url, content, user_id, users!inner(profile_image, username)")) {
                                 filter {
                                     eq("category", category)
                                 }
                                 order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
                                 limit(10)
                             }
-                        val submissionsList = result.decodeList<FeedSubmission>()
-                        Log.d("SupabaseTest", "Fetched submissions: $submissionsList")
-                        submissionsList
+                        val postsList = result.decodeList<FeedPost>()
+                        Log.d("SupabaseTest", "Fetched posts: $postsList")
+                        postsList
                     }
-                    submissions = fetchedSubmissions
+                    posts = fetchedPosts
                 } catch (e: Exception) {
-                    fetchError = "Failed to load submissions: ${e.message}"
+                    fetchError = "Failed to load posts: ${e.message}"
                 }
             }
 
@@ -147,21 +148,22 @@ fun CategoryFeed(navController: NavController, category: String) {
 
             if (fetchError != null) {
                 Text(text = fetchError!!)
-            } else if (submissions.isEmpty()) {
-                Text(text = "No submissions yet for this category.")
+            } else if (posts.isEmpty()) {
+                Text(text = "No posts yet for this category.")
             } else {
                 LazyColumn {
-                    items(submissions) { submission ->
-                        val defaultPfp = remember { submission.user.profile_image ?: defaultProfileImages.random() }
+                    items(posts) { post ->
+                        val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
                         Post(
+                            postId = post.id,
                             profileImage = defaultPfp,
-                            username = submission.user.username ?: "Unknown User",
-                            postImage = submission.image_url,
-                            caption = submission.content,
+                            username = post.user.username ?: "Unknown User",
+                            postImage = post.image_url,
+                            caption = post.content,
                             likeCount = 0,
                             commentCount = 0,
                             onCommentClicked = {
-                                navController.navigate("individual_post")
+                                navController.navigate("individual_post/${post.id}")
                             },
                             onProfileClick = {
                                 selectedPfpUrl = defaultPfp

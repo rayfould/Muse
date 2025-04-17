@@ -45,9 +45,9 @@ import okhttp3.Request
 fun NewPostPage(navController: NavController, category: String) {
     val context = LocalContext.current
 
-    // Submission serializable class
+    // Post serializable class
     @Serializable
-    data class Submission(
+    data class Post(
         val user_id: Int,
         val prompt_id: Int,
         val content: String,
@@ -275,8 +275,8 @@ fun NewPostPage(navController: NavController, category: String) {
                         Log.d("SupabaseTest", "User response: $userResponse")
                         val userId = userResponse["id"] ?: throw Exception("User ID not found in response")
                         val mockPromptId = 1 // Replace with real prompt ID later
-                        SupabaseClient.client.postgrest.from("submissions").insert(
-                            Submission(
+                        SupabaseClient.client.postgrest.from("posts").insert(
+                            Post(
                                 user_id = userId,
                                 prompt_id = mockPromptId,
                                 content = postCaption.text,

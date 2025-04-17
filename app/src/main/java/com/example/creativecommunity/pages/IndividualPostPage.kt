@@ -7,12 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 
 @Composable
-fun IndividualPostPage(navController: NavController) {
+fun IndividualPostPage(navController: NavController, postId: String? = null) {
     Column {
         Button(onClick = { navController.popBackStack() }) {
             Text("Back")
         }
         Post(
+            postId = postId ?: "",
             profileImage = "https://i.imgur.com/qBPkCnP.jpeg",
             username = "Bob Ross",
             postImage = "https://i.imgur.com/NxjUBgB.jpeg",
