@@ -13,7 +13,7 @@ fun IndividualPostPage(navController: NavController, postId: String? = null) {
             Text("Back")
         }
         Post(
-            postId = postId ?: "",
+            postId = postId?.toIntOrNull() ?: 0,
             profileImage = "https://i.imgur.com/qBPkCnP.jpeg",
             username = "Bob Ross",
             postImage = "https://i.imgur.com/NxjUBgB.jpeg",

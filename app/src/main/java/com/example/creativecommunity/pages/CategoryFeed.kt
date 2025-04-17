@@ -44,7 +44,7 @@ data class Prompt(
 
 @Serializable
 data class FeedPost(
-    val id: String,
+    val id: Int,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("users") val user: UserData

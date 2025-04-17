@@ -8,7 +8,7 @@ import java.util.UUID
 data class Like(
     val id: String? = null,
     @SerialName("user_id") val userId: String,
-    @SerialName("post_id") val postId: String, // Keep as String for now, will be converted to Int in DB calls
+    @SerialName("post_id") val postId: Int, // Changed from String to Int
     @SerialName("created_at") val createdAt: String? = null
 )
 
@@ -19,7 +19,7 @@ data class LikeCount(
 
 // For tracking post likes in memory
 data class PostLike(
-    val postId: String, // Keep as String for compatibility with existing code
+    val postId: Int, // Changed from String to Int
     val isLiked: Boolean,  // true for like, false for unlike
     val timestamp: Long = System.currentTimeMillis()
 )
@@ -27,7 +27,7 @@ data class PostLike(
 // For storing in local storage
 @Serializable
 data class PendingLikeAction(
-    val postId: String, // Keep as String for compatibility with existing code
+    val postId: Int, // Changed from String to Int
     val userId: String,
     val action: String, // "like" or "unlike"
     val timestamp: Long

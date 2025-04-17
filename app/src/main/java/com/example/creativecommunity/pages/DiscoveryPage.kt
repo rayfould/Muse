@@ -30,7 +30,7 @@ import kotlin.random.Random
 
 @Serializable
 data class DiscoveryPost(
-    val id: String,
+    val id: Int,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("category") val category: String,
