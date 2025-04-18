@@ -2,7 +2,6 @@ package com.example.creativecommunity.pages
 
 import android.util.Log
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,9 +26,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Locale
-import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 // Data class to hold post with its like count for sorting

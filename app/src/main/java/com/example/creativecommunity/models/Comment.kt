@@ -1,4 +1,4 @@
-package com.example.creativecommunity.pages
+package com.example.creativecommunity.models
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable

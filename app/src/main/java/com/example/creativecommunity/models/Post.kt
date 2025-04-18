@@ -1,4 +1,4 @@
-package com.example.creativecommunity.pages
+package com.example.creativecommunity.models
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
-import com.example.creativecommunity.models.PostLike
 import com.example.creativecommunity.utils.LikeManager
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch

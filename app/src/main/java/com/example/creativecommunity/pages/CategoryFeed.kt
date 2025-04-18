@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.Post
 import com.example.creativecommunity.models.UserData
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
