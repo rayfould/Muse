@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -32,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -60,6 +63,9 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
 fun ProfilePage(navController: NavController) {
@@ -69,6 +75,14 @@ fun ProfilePage(navController: NavController) {
     
     // For profile picture expansion
     var showPfpDialog by remember { mutableStateOf(false) }
+    
+    // For email change dialog
+    var showEmailDialog by remember { mutableStateOf(false) }
+    var newEmail by remember { mutableStateOf("") }
+    var confirmEmail by remember { mutableStateOf("") }
+    var isEmailChanging by remember { mutableStateOf(false) }
+    var emailChangeError by remember { mutableStateOf<String?>(null) }
+    var currentEmail by remember { mutableStateOf("") }
     
     // Editable fields
     var editedUsername by remember { mutableStateOf("") }
@@ -213,6 +227,55 @@ fun ProfilePage(navController: NavController) {
         }
     }
 
+    // Function to update email
+    fun updateEmail(email: String) {
+        scope.launch {
+            isEmailChanging = true
+            emailChangeError = null
+            
+            // Debug log for email passed
+            Log.d("ProfilePage", "Calling auth.updateUser with email='$email'")
+            
+            try {
+                withContext(Dispatchers.IO) {
+                    SupabaseClient.client.auth.updateUser {
+                        this.email = email
+                    }
+                }
+                
+                // Then, update email in the users table
+                try {
+                    val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
+                    withContext(Dispatchers.IO) {
+                        SupabaseClient.client.postgrest.from("users")
+                            .update({
+                                set("email", email)
+                            }) {
+                                filter { eq("auth_id", authId) }
+                            }
+                    }
+                    Log.d("ProfilePage", "User table email updated successfully to: $email")
+                } catch (e: Exception) {
+                    Log.e("ProfilePage", "Failed to update email in user table: ${e.message}", e)
+                    // We don't throw here because the auth update was successful
+                    // Just log the error since the email will be verified and synced later
+                }
+                
+                // Show confirmation and close dialog
+                showEmailDialog = false
+                newEmail = ""
+                confirmEmail = ""
+                // Show a success message (you could use a Snackbar or Toast here)
+                Log.d("ProfilePage", "Email update initiated. Verification email sent to: $email")
+            } catch (e: Exception) {
+                Log.e("ProfilePage", "Error updating email: ${e.message}", e)
+                emailChangeError = "Failed to update email: ${e.message}"
+            } finally {
+                isEmailChanging = false
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -292,6 +355,152 @@ fun ProfilePage(navController: NavController) {
                     }
                 }
 
+                // Email Change Dialog
+                if (showEmailDialog) {
+                    // Fetch current email when dialog opens
+                    LaunchedEffect(Unit) {
+                        try {
+                            val user = SupabaseClient.client.auth.retrieveUserForCurrentSession()
+                            currentEmail = user.email ?: ""
+                        } catch (e: Exception) {
+                            Log.e("ProfilePage", "Error fetching current email: ${e.message}", e)
+                            currentEmail = ""
+                        }
+                    }
+                    
+                    Dialog(onDismissRequest = { 
+                        showEmailDialog = false
+                        newEmail = ""
+                        confirmEmail = ""
+                        emailChangeError = null
+                    }) {
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Change Email",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                            
+                            // Current email display
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                Text(
+                                    text = "Current email:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = currentEmail,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            
+                            OutlinedTextField(
+                                value = newEmail,
+                                onValueChange = { 
+                                    newEmail = it
+                                    emailChangeError = null 
+                                },
+                                label = { Text("New Email Address") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                isError = emailChangeError != null
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            OutlinedTextField(
+                                value = confirmEmail,
+                                onValueChange = { 
+                                    confirmEmail = it
+                                    emailChangeError = null 
+                                },
+                                label = { Text("Confirm Email Address") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                isError = emailChangeError != null
+                            )
+                            
+                            if (emailChangeError != null) {
+                                Text(
+                                    text = emailChangeError!!,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = { 
+                                        showEmailDialog = false
+                                        newEmail = ""
+                                        confirmEmail = ""
+                                        emailChangeError = null
+                                    }
+                                ) {
+                                    Text("Cancel")
+                                }
+                                
+                                Spacer(modifier = Modifier.width(8.dp))
+                                
+                                Button(
+                                    onClick = {
+                                        if (newEmail.isBlank()) {
+                                            emailChangeError = "Email cannot be empty"
+                                            return@Button
+                                        }
+                                        if (confirmEmail.isBlank()) {
+                                            emailChangeError = "Please confirm your email"
+                                            return@Button
+                                        }
+                                        if (newEmail != confirmEmail) {
+                                            emailChangeError = "Email addresses don't match"
+                                            return@Button
+                                        }
+                                        // Debug log for email values
+                                        Log.d("ProfilePage", "Update button clicked. newEmail='$newEmail', confirmEmail='$confirmEmail'")
+                                        updateEmail(newEmail)
+                                    },
+                                    enabled = !isEmailChanging
+                                ) {
+                                    if (isEmailChanging) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text("Update")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Username
@@ -327,18 +536,13 @@ fun ProfilePage(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { /* TODO: Handle change email */ },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "Change Email",
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Icon(Icons.Default.Email, contentDescription = "Change Email", modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Change Email")
                     }
