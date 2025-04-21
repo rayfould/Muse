@@ -29,9 +29,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
 
 // Extension property for DataStore
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "like_preferences")
+
+// Helper class to get user ID from auth_id
+@Serializable
+private data class UserIdResponse(
+    val id: Int
+)
 
 /**
  * Manages like operations with batching and local storage
@@ -76,22 +83,49 @@ class LikeManager private constructor(private val context: Context) {
     }
     
     /**
+     * Get the numeric user ID from auth ID
+     */
+    private suspend fun getUserIdFromAuthId(authId: String): Int? {
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                SupabaseClient.client.postgrest.from("users")
+                    .select {
+                        filter {
+                            eq("auth_id", authId)
+                        }
+                    }
+                    .decodeList<UserIdResponse>()
+            }
+            
+            if (result.isNotEmpty()) {
+                result.first().id
+            } else {
+                Log.e(TAG, "[$INSTANCE_ID] No user found with auth_id $authId")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[$INSTANCE_ID] Error getting user ID for auth_id $authId: ${e.message}", e)
+            null
+        }
+    }
+    
+    /**
      * Queue a like action for batched processing
      */
-    fun queueLike(userId: String, postId: Int, isLiked: Boolean) {
-        Log.d(TAG, "[$INSTANCE_ID] Queueing ${if (isLiked) "like" else "unlike"} for post $postId by user $userId")
+    fun queueLike(authId: String, postId: Int, isLiked: Boolean) {
+        Log.d(TAG, "[$INSTANCE_ID] Queueing ${if (isLiked) "like" else "unlike"} for post $postId by auth_id $authId")
         
         // Create a pending action
         val action = PendingLikeAction(
             postId = postId,
-            userId = userId,
+            userId = authId, // Store auth_id temporarily
             action = if (isLiked) "like" else "unlike",
             timestamp = System.currentTimeMillis()
         )
         
         synchronized(pendingLikes) {
             // Remove any pending actions for this post/user
-            pendingLikes.removeAll { it.postId == postId && it.userId == userId }
+            pendingLikes.removeAll { it.postId == postId && it.userId == authId }
             // Add the new action
             pendingLikes.add(action)
         }
@@ -125,12 +159,15 @@ class LikeManager private constructor(private val context: Context) {
     /**
      * Get whether the post is liked by the current user
      */
-    suspend fun isPostLikedByUser(userId: String, postId: Int): Boolean {
+    suspend fun isPostLikedByUser(authId: String, postId: Int): Boolean {
         // Check internal state first
         _postLikes.value.find { it.postId == postId }?.let {
             Log.d(TAG, "[$INSTANCE_ID] Using cached like state for post $postId: isLiked=${it.isLiked}")
             return it.isLiked
         }
+        
+        // Get numeric user ID
+        val userId = getUserIdFromAuthId(authId) ?: return false
         
         // Otherwise query database
         return try {
@@ -188,8 +225,11 @@ class LikeManager private constructor(private val context: Context) {
     /**
      * Refresh like status for multiple posts
      */
-    suspend fun refreshLikeStatus(userId: String, postIds: List<Int>) {
+    suspend fun refreshLikeStatus(authId: String, postIds: List<Int>) {
         if (postIds.isEmpty()) return
+        
+        // Get numeric user ID
+        val userId = getUserIdFromAuthId(authId) ?: return
         
         try {
             Log.d(TAG, "[$INSTANCE_ID] Refreshing like status for ${postIds.size} posts")
@@ -233,7 +273,9 @@ class LikeManager private constructor(private val context: Context) {
     /**
      * Check if a like already exists in the database
      */
-    private suspend fun checkLikeExists(userId: String, postId: Int): Boolean {
+    private suspend fun checkLikeExists(authId: String, postId: Int): Boolean {
+        val userId = getUserIdFromAuthId(authId) ?: return false
+        
         return try {
             withContext(Dispatchers.IO) {
                 val result = SupabaseClient.client.postgrest.from("likes")
@@ -275,6 +317,14 @@ class LikeManager private constructor(private val context: Context) {
         // Process one action at a time to better handle errors
         for (action in actionsToProcess) {
             try {
+                // Get numeric user ID from auth ID
+                val userId = getUserIdFromAuthId(action.userId)
+                
+                if (userId == null) {
+                    Log.e(TAG, "[$INSTANCE_ID] Could not find user ID for auth_id ${action.userId}")
+                    continue
+                }
+                
                 if (action.action == "like") {
                     // Check if like already exists before inserting
                     val exists = checkLikeExists(action.userId, action.postId)
@@ -282,7 +332,7 @@ class LikeManager private constructor(private val context: Context) {
                     if (!exists) {
                         withContext(Dispatchers.IO) {
                             SupabaseClient.client.postgrest.from("likes")
-                                .insert(Like(userId = action.userId, postId = action.postId))
+                                .insert(Like(userId = userId, postId = action.postId))
                         }
                         Log.d(TAG, "[$INSTANCE_ID] Successfully inserted like for post ${action.postId}")
                     } else {
@@ -297,7 +347,7 @@ class LikeManager private constructor(private val context: Context) {
                         SupabaseClient.client.postgrest.from("likes")
                             .delete {
                                 filter {
-                                    eq("user_id", action.userId)
+                                    eq("user_id", userId)
                                     eq("post_id", action.postId)
                                 }
                             }

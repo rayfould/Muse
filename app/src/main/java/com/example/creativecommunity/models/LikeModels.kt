@@ -7,8 +7,8 @@ import java.util.UUID
 @Serializable
 data class Like(
     val id: String? = null,
-    @SerialName("user_id") val userId: String,
-    @SerialName("post_id") val postId: Int, // Changed from String to Int
+    @SerialName("user_id") val userId: Int,
+    @SerialName("post_id") val postId: Int,
     @SerialName("created_at") val createdAt: String? = null
 )
 
@@ -28,8 +28,8 @@ data class PostLike(
 // For storing in local storage
 @Serializable
 data class PendingLikeAction(
-    val postId: Int, // Changed from String to Int
-    val userId: String,
+    val postId: Int,
+    val userId: String, // This is the auth_id from Supabase Auth
     val action: String, // "like" or "unlike"
     val timestamp: Long
 )
