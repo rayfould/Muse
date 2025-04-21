@@ -1,5 +1,6 @@
 package com.example.creativecommunity.models
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,11 +29,69 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.utils.LikeManager
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
+data class UserInfo(
+    val id: Int,
+    val username: String,
+    val email: String,
+    val profile_image: String? = null,
+    val bio: String? = null,
+    val auth_id: String
+)
+
+@Serializable
+data class SavedPost(
+    val id: Int? = null,
+    val auth_id: String,
+    @SerialName("user_id") val userId: Int,
+    val post_id: Int,
+    val created_at: String? = null
+)
+
+// Helper function to get the integer user ID from auth ID
+private suspend fun getUserIdFromAuth(authId: String): Int? {
+    return try {
+        Log.d("SavePost", "Looking up user ID for auth ID: $authId")
+        val client = SupabaseClient.client
+        val response = client.postgrest["users"]
+            .select {
+                filter {
+                    eq("auth_id", authId)
+                }
+            }
+        
+        try {
+            val users = response.decodeList<UserInfo>()
+            Log.d("SavePost", "Found ${users.size} users for auth ID: $authId")
+            
+            if (users.isNotEmpty()) {
+                val userId = users.first().id
+                Log.d("SavePost", "User ID for auth ID $authId is: $userId")
+                userId
+            } else {
+                Log.e("SavePost", "No user found for auth ID: $authId")
+                null
+            }
+        } catch (e: Exception) {
+            // If we can't decode as UserInfo, just log the error
+            Log.e("SavePost", "Error decoding as UserInfo: ${e.message}", e)
+            null
+        }
+    } catch (e: Exception) {
+        Log.e("SavePost", "Error getting user ID for auth ID $authId: ${e.message}", e)
+        null
+    }
+}
 
 // Individual post composable:
 // Write it here to reuse both in the feed and for individual post page
@@ -62,16 +121,58 @@ fun Post(
     var isLiked by remember { mutableStateOf(false) }
     var currentLikeCount by remember { mutableIntStateOf(0) } // Start at 0 and load from DB
     var hasLoadedInitialState by remember { mutableStateOf(false) }
-
-    // Initial data loading
-    LaunchedEffect(userId, postId) {
+    
+    // State for saves
+    var isSaved by remember { mutableStateOf(false) }
+    
+    // Track if we need to refresh save status
+    val refreshKey = remember { mutableStateOf(0) }
+    
+    // Initial data loading with refreshKey
+    LaunchedEffect(userId, postId, refreshKey.value) {
         if (userId.isNotEmpty() && postId > 0) {
             // Get actual like count first
-            val count = likeManager.getLikeCount(postId)
-            currentLikeCount = count
+            val likeCountValue = likeManager.getLikeCount(postId)
+            currentLikeCount = likeCountValue
             
             // Then check if user has liked this post
             isLiked = likeManager.isPostLikedByUser(userId, postId)
+            
+            // Check if post is saved
+            try {
+                val client = SupabaseClient.client
+                
+                // Get numeric user ID first
+                val numericUserId = getUserIdFromAuth(userId)
+                if (numericUserId != null) {
+                    Log.d("SavePost", "Checking save status for post $postId with user_id $numericUserId")
+                    
+                    // Use user_id column
+                    val response = client.postgrest["saved_posts"]
+                        .select {
+                            filter {
+                                eq("user_id", numericUserId)
+                                eq("post_id", postId)
+                            }
+                        }
+                    
+                    val savedPostsList = response.decodeList<SavedPost>()
+                    
+                    // Set the state based on query results
+                    val wasSavedBefore = isSaved
+                    isSaved = savedPostsList.isNotEmpty()
+                    
+                    Log.d("SavePost", "Initial check - Post $postId is ${if (isSaved) "saved" else "not saved"} for user_id $numericUserId (found ${savedPostsList.size} entries)")
+                    
+                    if (wasSavedBefore != isSaved) {
+                        Log.d("SavePost", "Save status changed from $wasSavedBefore to $isSaved")
+                    }
+                } else {
+                    Log.e("SavePost", "Could not find numeric user ID for auth_id $userId")
+                }
+            } catch (e: Exception) {
+                Log.e("SavePost", "Error checking if post is saved: ${e.message}", e)
+            }
             
             hasLoadedInitialState = true
         }
@@ -112,6 +213,82 @@ fun Post(
             coroutineScope.launch {
                 likeManager.queueLike(userId, postId, newLikedState)
             }
+        }
+    }
+    
+    // Handle save button press
+    val toggleSave = {
+        if (userId.isNotEmpty() && postId > 0) {
+            val newSavedState = !isSaved
+            isSaved = newSavedState
+            
+            Log.d("SavePost", "Attempting to ${if (newSavedState) "save" else "unsave"} post $postId for auth_id $userId")
+            
+            coroutineScope.launch {
+                try {
+                    val client = SupabaseClient.client
+                    
+                    // Get numeric user ID first
+                    val numericUserId = getUserIdFromAuth(userId)
+                    if (numericUserId == null) {
+                        Log.e("SavePost", "Could not find numeric user ID for auth_id $userId")
+                        isSaved = !newSavedState // Revert UI state
+                        return@launch
+                    }
+                    
+                    if (newSavedState) {
+                        // Save the post - first check if it already exists
+                        Log.d("SavePost", "Checking if post $postId is already saved by user $numericUserId")
+                        
+                        val existingResponse = client.postgrest["saved_posts"]
+                            .select {
+                                filter {
+                                    eq("user_id", numericUserId)
+                                    eq("post_id", postId)
+                                }
+                            }
+                        
+                        val existingSaves = existingResponse.decodeList<SavedPost>()
+                        
+                        if (existingSaves.isNotEmpty()) {
+                            Log.d("SavePost", "Post $postId is already saved by user $numericUserId, skipping insert")
+                        } else {
+                            // Post is not already saved, proceed with insert
+                            Log.d("SavePost", "Inserting into saved_posts: auth_id=$userId, user_id=$numericUserId, post_id=$postId")
+                            
+                            val savedPost = SavedPost(
+                                auth_id = userId,
+                                userId = numericUserId,
+                                post_id = postId
+                            )
+                            
+                            val result = client.postgrest["saved_posts"].insert(savedPost)
+                            Log.d("SavePost", "Insert result: $result")
+                        }
+                    } else {
+                        // Unsave the post - use either auth_id or user_id depending on your database constraints
+                        Log.d("SavePost", "Deleting from saved_posts: auth_id=$userId, post_id=$postId")
+                        
+                        val result = client.postgrest["saved_posts"].delete {
+                            filter {
+                                eq("user_id", numericUserId)
+                                eq("post_id", postId)
+                            }
+                        }
+                        Log.d("SavePost", "Delete result: $result")
+                    }
+                    
+                    // Increment the refresh key to force LaunchedEffect to run again
+                    refreshKey.value++
+                    
+                } catch (e: Exception) {
+                    // Handle error - revert UI state
+                    Log.e("SavePost", "Error saving/unsaving post: ${e.message}", e)
+                    isSaved = !newSavedState
+                }
+            }
+        } else {
+            Log.w("SavePost", "Cannot save: userId empty or postId <= 0. userId=$userId, postId=$postId")
         }
     }
     
@@ -164,14 +341,14 @@ fun Post(
         Text(text = caption, modifier = Modifier.padding(horizontal = 10.dp))
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Like, Comment Buttons
+        // Like, Comment, Save Buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = toggleLike) {
+            Button(onClick = { toggleLike() }) {
                 if (isLiked) {
                     Text("♥️ $currentLikeCount")
                 } else {
@@ -180,9 +357,31 @@ fun Post(
             }
 
             // Comment button
-            Button(onClick = onCommentClicked) {
+            Button(onClick = { onCommentClicked() }) {
                 Text("💬 $commentCount")
             }
+            
+            // Save button
+            Button(onClick = { toggleSave() }) {
+                if (isSaved) {
+                    // Use filled star for saved
+                    Text("\uD83C\uDF1F")
+                } else {
+                    // Use outlined star for not saved
+                    Text("⭐")
+                }
+            }
         }
+
+        // Add debug output to show save state
+        /*
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Debug: Saved = $isSaved",
+            style = MaterialTheme.typography.bodySmall,
+            fontSize = 10.sp,
+            modifier = Modifier.padding(start = 10.dp)
+        )
+        */
     }
 }
