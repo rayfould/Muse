@@ -84,6 +84,13 @@ fun ProfilePage(navController: NavController) {
     var emailChangeError by remember { mutableStateOf<String?>(null) }
     var currentEmail by remember { mutableStateOf("") }
     
+    // For password change dialog
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var isPasswordChanging by remember { mutableStateOf(false) }
+    var passwordChangeError by remember { mutableStateOf<String?>(null) }
+
     // Editable fields
     var editedUsername by remember { mutableStateOf("") }
     var editedBio by remember { mutableStateOf("") }
@@ -272,6 +279,30 @@ fun ProfilePage(navController: NavController) {
                 emailChangeError = "Failed to update email: ${e.message}"
             } finally {
                 isEmailChanging = false
+            }
+        }
+    }
+
+    // Function to update password
+    fun updatePassword(password: String) {
+        scope.launch {
+            isPasswordChanging = true
+            passwordChangeError = null
+            try {
+                withContext(Dispatchers.IO) {
+                    SupabaseClient.client.auth.updateUser {
+                        this.password = password
+                    }
+                }
+                showPasswordDialog = false
+                newPassword = ""
+                confirmPassword = ""
+                Log.d("ProfilePage", "Password update initiated.")
+            } catch (e: Exception) {
+                Log.e("ProfilePage", "Error updating password: ${e.message}", e)
+                passwordChangeError = "Failed to update password: ${e.message}"
+            } finally {
+                isPasswordChanging = false
             }
         }
     }
@@ -501,6 +532,69 @@ fun ProfilePage(navController: NavController) {
                     }
                 }
 
+                // Password Change Dialog
+                if (showPasswordDialog) {
+                    Dialog(onDismissRequest = {
+                        showPasswordDialog = false
+                        newPassword = ""
+                        confirmPassword = ""
+                        passwordChangeError = null
+                    }) {
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "Change Password", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
+                            
+                            OutlinedTextField(
+                                value = newPassword,
+                                onValueChange = { newPassword = it; passwordChangeError = null },
+                                label = { Text("New Password") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                isError = passwordChangeError != null
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = confirmPassword,
+                                onValueChange = { confirmPassword = it; passwordChangeError = null },
+                                label = { Text("Confirm Password") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                isError = passwordChangeError != null
+                            )
+                            if (passwordChangeError != null) {
+                                Text(text = passwordChangeError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = { showPasswordDialog = false; newPassword = ""; confirmPassword = ""; passwordChangeError = null }) {
+                                    Text("Cancel")
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(onClick = {
+                                    if (newPassword.isBlank()) { passwordChangeError = "Password cannot be empty"; return@Button }
+                                    if (confirmPassword.isBlank()) { passwordChangeError = "Please confirm your password"; return@Button }
+                                    if (newPassword != confirmPassword) { passwordChangeError = "Passwords don't match"; return@Button }
+                                    updatePassword(newPassword)
+                                }, enabled = !isPasswordChanging) {
+                                    if (isPasswordChanging) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                    } else {
+                                        Text("Update")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Username
@@ -536,6 +630,7 @@ fun ProfilePage(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
+                        onClick = { showEmailDialog = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -548,18 +643,14 @@ fun ProfilePage(navController: NavController) {
                     }
 
                     Button(
-                        onClick = { /* TODO: Handle change password */ },
+                        onClick = { showPasswordDialog = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "Change Password",
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Icon(Icons.Default.Lock, contentDescription = "Change Password", modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Change Password")
                     }
