@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import androidx.compose.ui.layout.ContentScale
 
 @Serializable
 data class Prompt(
@@ -149,7 +150,6 @@ fun CategoryFeed(navController: NavController, category: String) {
         Dialog(onDismissRequest = { showPostImageDialog = false }) {
             Box(
                 modifier = Modifier
-                    .padding(16.dp)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
@@ -157,8 +157,9 @@ fun CategoryFeed(navController: NavController, category: String) {
                     model = selectedPostImageUrl,
                     contentDescription = "Enlarged post image",
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showPostImageDialog = false }
+                        .fillMaxWidth(0.9f)  // Take up 90% of screen width
+                        .clickable { showPostImageDialog = false },
+                    contentScale = ContentScale.FillWidth
                 )
             }
         }

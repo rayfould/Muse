@@ -105,7 +105,8 @@ fun Post(
     likeCount: Int, // Initial like count (only used if we can't fetch from DB)
     commentCount: Int,
     onCommentClicked: () -> Unit = {}, // --> create a comment....? create this action later
-    onProfileClick: () -> Unit = {} // Add this parameter
+    onProfileClick: () -> Unit = {}, // Add this parameter
+    onImageClick: () -> Unit = {} // Add parameter for post image click
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -334,6 +335,7 @@ fun Post(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(225.dp)
+                .clickable { onImageClick() }
         )
         Spacer(modifier = Modifier.height(10.dp))
 
