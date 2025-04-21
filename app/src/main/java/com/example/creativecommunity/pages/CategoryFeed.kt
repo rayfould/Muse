@@ -65,193 +65,234 @@ data class FeedPost(
 
 @Composable
 fun CategoryFeed(navController: NavController, category: String) {
+    // State variables
+    var promptData by remember { mutableStateOf<PromptWithDates?>(null) }
+    var promptLoading by remember { mutableStateOf(true) }
+    var promptError by remember { mutableStateOf<String?>(null) }
+    var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
+    var fetchError by remember { mutableStateOf<String?>(null) }
+    
+    // Profile picture expansion
+    var showPfpDialog by remember { mutableStateOf(false) }
+    var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
+    
+    // Post image expansion
+    var showPostImageDialog by remember { mutableStateOf(false) }
+    var selectedPostImageUrl by remember { mutableStateOf<String?>(null) }
+
+    // Default profile images for users without one
+    val defaultProfileImages = listOf(
+        "https://i.imgur.com/DyFZblf.jpeg", // Gray square
+        "https://i.imgur.com/kcbZfpx.png", // Smiley face
+        "https://i.imgur.com/WvDsY4x.jpeg", // Simple avatar silhouette
+        "https://i.imgur.com/iCy2JU1.jpeg", // Minimalist user icon
+        "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
+    )
+
+    // Fetch prompt data
+    LaunchedEffect(category) {
+        try {
+            promptLoading = true
+            val prompt = PromptRotation.getCurrentPrompt(category)
+            promptData = prompt
+            promptLoading = false
+        } catch (e: Exception) {
+            promptError = "Failed to load prompt: ${e.message}"
+            promptLoading = false
+        }
+    }
+
+    // Fetch posts
+    LaunchedEffect(category) {
+        try {
+            val fetchedPosts = withContext(Dispatchers.IO) {
+                val result = SupabaseClient.client.postgrest.from("posts")
+                    .select(Columns.raw("id, image_url, content, user_id, users!inner(profile_image, username)")) {
+                        filter {
+                            eq("category", category)
+                        }
+                        order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                        limit(10)
+                    }
+                val postsList = result.decodeList<FeedPost>()
+                Log.d("SupabaseTest", "Fetched posts: $postsList")
+                postsList
+            }
+            posts = fetchedPosts
+        } catch (e: Exception) {
+            fetchError = "Failed to load posts: ${e.message}"
+        }
+    }
+
+    // Profile picture dialog
+    if (showPfpDialog && selectedPfpUrl != null) {
+        Dialog(onDismissRequest = { showPfpDialog = false }) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AsyncImage(
+                    model = selectedPfpUrl,
+                    contentDescription = "Enlarged profile picture",
+                    modifier = Modifier
+                        .size(500.dp)
+                        .clickable { showPfpDialog = false }
+                )
+            }
+        }
+    }
+    
+    // Post image dialog
+    if (showPostImageDialog && selectedPostImageUrl != null) {
+        Dialog(onDismissRequest = { showPostImageDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = selectedPostImageUrl,
+                    contentDescription = "Enlarged post image",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showPostImageDialog = false }
+                )
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(15.dp)
     ) {
-        Column(
+        // Main content with LazyColumn that includes the header and prompt
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 80.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "$category Community!",
-                modifier = Modifier.padding(top = 30.dp),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-
-            var promptData by remember { mutableStateOf<PromptWithDates?>(null) }
-            var promptLoading by remember { mutableStateOf(true) }
-            var promptError by remember { mutableStateOf<String?>(null) }
-
-            LaunchedEffect(category) {
-                try {
-                    promptLoading = true
-                    val prompt = PromptRotation.getCurrentPrompt(category)
-                    promptData = prompt
-                    promptLoading = false
-                } catch (e: Exception) {
-                    promptError = "Failed to load prompt: ${e.message}"
-                    promptLoading = false
-                }
-            }
-
-            // Prompt Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F5F5)
+            // Header item
+            item {
+                Text(
+                    text = "$category Community!",
+                    modifier = Modifier.padding(top = 30.dp),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
                 )
-            ) {
-                Column(
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Prompt Card
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "THIS WEEK'S PROMPT",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color(0xFF666666),
-                        fontWeight = FontWeight.Bold
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF5F5F5)
                     )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    if (promptLoading) {
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
-                            text = "Loading prompt...",
-                            textAlign = TextAlign.Center
-                        )
-                    } else if (promptError != null) {
-                        Text(
-                            text = promptError!!,
-                            color = Color.Red,
-                            textAlign = TextAlign.Center
-                        )
-                    } else if (promptData == null) {
-                        Text(
-                            text = "No active prompt for $category",
-                            textAlign = TextAlign.Center
-                        )
-                    } else {
-                        Text(
-                            text = promptData!!.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
+                            text = "THIS WEEK'S PROMPT",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(0xFF666666),
+                            fontWeight = FontWeight.Bold
                         )
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        // Display description if available
-                        promptData!!.description?.let { description ->
+                        if (promptLoading) {
                             Text(
-                                text = description,
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                                text = "Loading prompt...",
+                                textAlign = TextAlign.Center
                             )
+                        } else if (promptError != null) {
+                            Text(
+                                text = promptError!!,
+                                color = Color.Red,
+                                textAlign = TextAlign.Center
+                            )
+                        } else if (promptData == null) {
+                            Text(
+                                text = "No active prompt for $category",
+                                textAlign = TextAlign.Center
+                            )
+                        } else {
+                            Text(
+                                text = promptData!!.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // Display description if available
+                            promptData!!.description?.let { description ->
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                            }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
-            var fetchError by remember { mutableStateOf<String?>(null) }
-
-            var showPfpDialog by remember { mutableStateOf(false) }
-            var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
-
-            if (showPfpDialog && selectedPfpUrl != null) {
-                Dialog(onDismissRequest = { showPfpDialog = false }) {
-                    Column(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        AsyncImage(
-                            model = selectedPfpUrl,
-                            contentDescription = "Enlarged profile picture",
-                            modifier = Modifier
-                                .size(500.dp)
-                                .clickable { showPfpDialog = false }
-                        )
-                    }
-                }
-            }
-
-            LaunchedEffect(category) {
-                try {
-                    val fetchedPosts = withContext(Dispatchers.IO) {
-                        val result = SupabaseClient.client.postgrest.from("posts")
-                            .select(Columns.raw("id, image_url, content, user_id, users!inner(profile_image, username)")) {
-                                filter {
-                                    eq("category", category)
-                                }
-                                order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
-                                limit(10)
-                            }
-                        val postsList = result.decodeList<FeedPost>()
-                        Log.d("SupabaseTest", "Fetched posts: $postsList")
-                        postsList
-                    }
-                    posts = fetchedPosts
-                } catch (e: Exception) {
-                    fetchError = "Failed to load posts: ${e.message}"
-                }
-            }
-
-            val defaultProfileImages = listOf(
-                "https://i.imgur.com/DyFZblf.jpeg", // Gray square
-                "https://i.imgur.com/kcbZfpx.png", // Smiley face
-                "https://i.imgur.com/WvDsY4x.jpeg", // Simple avatar silhouette
-                "https://i.imgur.com/iCy2JU1.jpeg", // Minimalist user icon
-                "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
-            )
-
+            // Show error or empty state
             if (fetchError != null) {
-                Text(text = fetchError!!)
+                item {
+                    Text(text = fetchError!!)
+                }
             } else if (posts.isEmpty()) {
-                Text(text = "No posts yet for this category.")
+                item {
+                    Text(text = "No posts yet for this category.")
+                }
             } else {
-                LazyColumn {
-                    items(posts) { post ->
-                        val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
-                        Post(
-                            postId = post.id,
-                            profileImage = defaultPfp,
-                            username = post.user.username ?: "Unknown User",
-                            postImage = post.image_url,
-                            caption = post.content,
-                            likeCount = 0,
-                            commentCount = 0,
-                            onCommentClicked = {
-                                navController.navigate("individual_post/${post.id}")
-                            },
-                            onProfileClick = {
-                                selectedPfpUrl = defaultPfp
-                                showPfpDialog = true
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+                // Posts list
+                items(posts) { post ->
+                    val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
+                    Post(
+                        postId = post.id,
+                        profileImage = defaultPfp,
+                        username = post.user.username ?: "Unknown User",
+                        postImage = post.image_url,
+                        caption = post.content,
+                        likeCount = 0,
+                        commentCount = 0,
+                        onCommentClicked = {
+                            navController.navigate("individual_post/${post.id}")
+                        },
+                        onProfileClick = {
+                            selectedPfpUrl = defaultPfp
+                            showPfpDialog = true
+                        },
+                        onImageClick = {
+                            selectedPostImageUrl = post.image_url
+                            showPostImageDialog = true
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
 
+        // Bottom navigation buttons
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
