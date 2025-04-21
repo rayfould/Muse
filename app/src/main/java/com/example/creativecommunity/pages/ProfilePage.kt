@@ -376,6 +376,21 @@ fun ProfilePage(navController: NavController) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("About Us")
                     }
+                    
+                    // Saved Posts button
+                    Button(
+                        onClick = { navController.navigate("saved_posts") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Text(
+                            text = "\uD83C\uDF1F Saved Posts",
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
                 }
 
                 // Save Changes Button (only shown when there are changes)

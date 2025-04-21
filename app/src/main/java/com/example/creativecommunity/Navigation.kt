@@ -13,6 +13,7 @@ import com.example.creativecommunity.pages.CategoryFeed
 import com.example.creativecommunity.pages.IndividualPostPage
 import com.example.creativecommunity.pages.DiscoveryPage
 import com.example.creativecommunity.pages.ProfilePage
+import com.example.creativecommunity.pages.SavedPostsPage
 import com.example.creativecommunity.components.BottomNavigationBar
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,6 +60,18 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             ) { paddingValues ->
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                     ProfilePage(navController)
+                }
+            }
+        }
+        
+        composable("saved_posts") { 
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    SavedPostsPage(navController)
                 }
             }
         }
