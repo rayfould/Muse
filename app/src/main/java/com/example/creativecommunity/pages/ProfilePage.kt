@@ -391,6 +391,21 @@ fun ProfilePage(navController: NavController) {
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
+                    
+                    // My Posts button
+                    Button(
+                        onClick = { navController.navigate("my_posts") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Text(
+                            text = "📝 My Posts",
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
                 }
 
                 // Save Changes Button (only shown when there are changes)
