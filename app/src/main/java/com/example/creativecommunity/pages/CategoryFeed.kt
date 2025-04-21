@@ -1,6 +1,8 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -31,6 +41,8 @@ import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.Post
 import com.example.creativecommunity.models.UserData
+import com.example.creativecommunity.utils.PromptRotation
+import com.example.creativecommunity.utils.PromptWithDates
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
@@ -68,30 +80,93 @@ fun CategoryFeed(navController: NavController, category: String) {
             Text(
                 text = "$category Community!",
                 modifier = Modifier.padding(top = 30.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            var promptTitle by remember { mutableStateOf("Loading prompt...") }
+            var promptData by remember { mutableStateOf<PromptWithDates?>(null) }
+            var promptLoading by remember { mutableStateOf(true) }
+            var promptError by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(category) {
                 try {
-                    val prompt = withContext(Dispatchers.IO) {
-                        SupabaseClient.client.postgrest.from("prompts")
-                            .select(Columns.raw("title")) {
-                                filter {
-                                    eq("category", category)
-                                    eq("is_active", true)
-                                }
-                            }
-                            .decodeSingle<Prompt>()
-                    }
-                    promptTitle = "This week's prompt: ${prompt.title}"
+                    promptLoading = true
+                    val prompt = PromptRotation.getCurrentPrompt(category)
+                    promptData = prompt
+                    promptLoading = false
                 } catch (e: Exception) {
-                    promptTitle = "Failed to load prompt: ${e.message}"
+                    promptError = "Failed to load prompt: ${e.message}"
+                    promptLoading = false
                 }
             }
 
-            Text(text = promptTitle)
+            // Prompt Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFF5F5F5)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "THIS WEEK'S PROMPT",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFF666666),
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    if (promptLoading) {
+                        Text(
+                            text = "Loading prompt...",
+                            textAlign = TextAlign.Center
+                        )
+                    } else if (promptError != null) {
+                        Text(
+                            text = promptError!!,
+                            color = Color.Red,
+                            textAlign = TextAlign.Center
+                        )
+                    } else if (promptData == null) {
+                        Text(
+                            text = "No active prompt for $category",
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        Text(
+                            text = promptData!!.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Display description if available
+                        promptData!!.description?.let { description ->
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
             var fetchError by remember { mutableStateOf<String?>(null) }
