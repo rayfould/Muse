@@ -1,6 +1,7 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,10 +17,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,11 +32,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,15 +49,23 @@ import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.Post
 import com.example.creativecommunity.models.UserData
+import com.example.creativecommunity.utils.LikeManager
 import com.example.creativecommunity.utils.PromptRotation
 import com.example.creativecommunity.utils.PromptWithDates
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import androidx.compose.ui.layout.ContentScale
+import kotlin.random.Random
+import com.example.creativecommunity.models.RecommendationEngine
+import com.example.creativecommunity.models.DiscoveryPost
+import com.example.creativecommunity.models.DiscoveryPostWithCounts
+import com.example.creativecommunity.models.PostMetrics
 
 @Serializable
 data class Prompt(
@@ -64,6 +80,12 @@ data class FeedPost(
     @SerialName("users") val user: UserData
 )
 
+// Data class to hold post with its like count for sorting (same as in DiscoveryPage)
+data class FeedPostWithLikes(
+    val post: FeedPost,
+    val likeCount: Int
+)
+
 @Composable
 fun CategoryFeed(navController: NavController, category: String) {
     // State variables
@@ -73,6 +95,12 @@ fun CategoryFeed(navController: NavController, category: String) {
     var posts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
     var fetchError by remember { mutableStateOf<String?>(null) }
     
+    // Sort functionality state variables
+    var showSortDropdown by remember { mutableStateOf(false) }
+    var selectedSortOption by remember { mutableStateOf("Recent") }
+    var isLoading by remember { mutableStateOf(false) }
+    var displayedPosts by remember { mutableStateOf<List<FeedPost>>(emptyList()) }
+    
     // Profile picture expansion
     var showPfpDialog by remember { mutableStateOf(false) }
     var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
@@ -80,6 +108,12 @@ fun CategoryFeed(navController: NavController, category: String) {
     // Post image expansion
     var showPostImageDialog by remember { mutableStateOf(false) }
     var selectedPostImageUrl by remember { mutableStateOf<String?>(null) }
+
+    // For coroutines and state
+    val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    val context = LocalContext.current
+    val likeManager = remember { LikeManager.getInstance(context) }
 
     // Default profile images for users without one
     val defaultProfileImages = listOf(
@@ -112,7 +146,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                         filter {
                             eq("category", category)
                         }
-                        order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                        order("created_at", Order.DESCENDING)
                         limit(10)
                     }
                 val postsList = result.decodeList<FeedPost>()
@@ -120,6 +154,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                 postsList
             }
             posts = fetchedPosts
+            displayedPosts = fetchedPosts // Initialize displayed posts with all posts
         } catch (e: Exception) {
             fetchError = "Failed to load posts: ${e.message}"
         }
@@ -172,6 +207,7 @@ fun CategoryFeed(navController: NavController, category: String) {
     ) {
         // Main content with LazyColumn that includes the header and prompt
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 80.dp),
@@ -179,12 +215,20 @@ fun CategoryFeed(navController: NavController, category: String) {
         ) {
             // Header item
             item {
-                Text(
-                    text = "$category Community!",
-                    modifier = Modifier.padding(top = 30.dp),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 30.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$category Community!",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Prompt Card
@@ -253,6 +297,100 @@ fun CategoryFeed(navController: NavController, category: String) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+                
+                // Sort button and dropdown - moved below the prompt card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Button(
+                        onClick = { showSortDropdown = true },
+                        enabled = !isLoading
+                    ) {
+                        Text("Sort by: $selectedSortOption")
+                    }
+                    
+                    DropdownMenu(
+                        expanded = showSortDropdown,
+                        onDismissRequest = { showSortDropdown = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Recent") },
+                            onClick = {
+                                selectedSortOption = "Recent"
+                                showSortDropdown = false
+                                isLoading = true
+                                coroutineScope.launch {
+                                    delay(300) // Small delay for animation
+                                    displayedPosts = posts
+                                    isLoading = false
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Most Liked") },
+                            onClick = {
+                                selectedSortOption = "Most Liked"
+                                showSortDropdown = false
+                                isLoading = true
+                                coroutineScope.launch {
+                                    // Fetch like counts for all posts and sort
+                                    fetchAndSortPostsByLikes(posts, likeManager) { sortedPosts ->
+                                        displayedPosts = sortedPosts
+                                        isLoading = false
+                                    }
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Recommended") },
+                            onClick = {
+                                selectedSortOption = "Recommended"
+                                showSortDropdown = false
+                                isLoading = true
+                                coroutineScope.launch {
+                                    // Use our recommendation algorithm
+                                    fetchAndScorePosts(posts, likeManager) { recommendedPosts ->
+                                        displayedPosts = recommendedPosts
+                                        isLoading = false
+                                    }
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Random") },
+                            onClick = {
+                                selectedSortOption = "Random"
+                                showSortDropdown = false
+                                isLoading = true
+                                coroutineScope.launch {
+                                    delay(300) // Small delay for animation
+                                    displayedPosts = posts.shuffled(Random(System.currentTimeMillis()))
+                                    isLoading = false
+                                }
+                            }
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Loading indicator
+            item {
+                AnimatedVisibility(
+                    visible = isLoading,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .size(48.dp)
+                    )
+                }
             }
 
             // Show error or empty state
@@ -266,29 +404,38 @@ fun CategoryFeed(navController: NavController, category: String) {
                 }
             } else {
                 // Posts list
-                items(posts) { post ->
+                items(
+                    items = displayedPosts,
+                    key = { it.id } // Use id as key for better stability
+                ) { post ->
                     val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
-                    Post(
-                        postId = post.id,
-                        profileImage = defaultPfp,
-                        username = post.user.username ?: "Unknown User",
-                        postImage = post.image_url,
-                        caption = post.content,
-                        likeCount = 0,
-                        commentCount = 0,
-                        onCommentClicked = {
-                            navController.navigate("individual_post/${post.id}")
-                        },
-                        onProfileClick = {
-                            selectedPfpUrl = defaultPfp
-                            showPfpDialog = true
-                        },
-                        onImageClick = {
-                            selectedPostImageUrl = post.image_url
-                            showPostImageDialog = true
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    AnimatedVisibility(
+                        visible = !isLoading,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Post(
+                            postId = post.id,
+                            profileImage = defaultPfp,
+                            username = post.user.username ?: "Unknown User",
+                            postImage = post.image_url,
+                            caption = post.content,
+                            likeCount = 0,
+                            commentCount = 0,
+                            onCommentClicked = {
+                                navController.navigate("individual_post/${post.id}")
+                            },
+                            onProfileClick = {
+                                selectedPfpUrl = defaultPfp
+                                showPfpDialog = true
+                            },
+                            onImageClick = {
+                                selectedPostImageUrl = post.image_url
+                                showPostImageDialog = true
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
@@ -318,3 +465,110 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 }
+
+// Function to fetch like counts and sort posts by likes (copied from DiscoveryPage)
+private suspend fun fetchAndSortPostsByLikes(
+    posts: List<FeedPost>,
+    likeManager: LikeManager,
+    onComplete: (List<FeedPost>) -> Unit
+) {
+    val postsWithLikes = mutableListOf<FeedPostWithLikes>()
+    
+    for (post in posts) {
+        val likeCount = likeManager.getLikeCount(post.id)
+        postsWithLikes.add(FeedPostWithLikes(post, likeCount))
+    }
+    
+    // Sort by like count (descending)
+    val sortedPosts = postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
+    
+    onComplete(sortedPosts)
+}
+
+// Function to fetch metrics, score and sort posts by the recommendation algorithm (copied from DiscoveryPage)
+private suspend fun fetchAndScorePosts(
+    posts: List<FeedPost>,
+    likeManager: LikeManager,
+    onComplete: (List<FeedPost>) -> Unit
+) {
+    // First, collect like and comment counts for all posts
+    val postsWithCounts = mutableListOf<FeedPostWithCounts>()
+    
+    for (post in posts) {
+        val likeCount = likeManager.getLikeCount(post.id)
+        // For simplicity, we'll generate random comment counts
+        // In a real app, you would fetch this from your database
+        val commentCount = (0..5).random() // Simplified for demo
+        
+        postsWithCounts.add(FeedPostWithCounts(post, likeCount, commentCount))
+    }
+    
+    // Convert FeedPostWithCounts to DiscoveryPostWithCounts for compatibility with RecommendationEngine
+    val discoveryPostsWithCounts = postsWithCounts.map { feedPostWithCounts ->
+        // Create a DiscoveryPost from FeedPost
+        val discoveryPost = DiscoveryPost(
+            id = feedPostWithCounts.post.id,
+            image_url = feedPostWithCounts.post.image_url,
+            content = feedPostWithCounts.post.content,
+            category = "", // Not used for recommendation algorithm
+            user = feedPostWithCounts.post.user,
+            created_at = null
+        )
+        
+        // Create a DiscoveryPostWithCounts with the converted post and the same counts
+        DiscoveryPostWithCounts(
+            post = discoveryPost,
+            likeCount = feedPostWithCounts.likeCount,
+            commentCount = feedPostWithCounts.commentCount
+        )
+    }
+    
+    // Compute author engagement metrics using converted posts
+    val authorEngagement = RecommendationEngine.computeAuthorEngagement(discoveryPostsWithCounts)
+    
+    // Create metrics for each post and score them
+    val scoredPosts = postsWithCounts.map { postWithCounts ->
+        val username = postWithCounts.post.user.username ?: ""
+        val engagement = authorEngagement[username] ?: 0f
+        
+        // Convert timestamp string to long if available, or use current time
+        val createdAt = System.currentTimeMillis() // Default to current time
+        
+        val metrics = PostMetrics(
+            postId = postWithCounts.post.id,
+            likeCount = postWithCounts.likeCount,
+            commentCount = postWithCounts.commentCount,
+            authorEngagement = engagement,
+            createdAt = createdAt
+        )
+        
+        val score = RecommendationEngine.score(metrics)
+        ScoredPost(postWithCounts.post, metrics, score)
+    }
+    
+    // Sort by score (descending)
+    val recommendedPosts = scoredPosts.sortedByDescending { it.score }.map { it.post }
+    
+    // Log the scores for debugging
+    scoredPosts.sortedByDescending { it.score }.take(5).forEach { scoredPost ->
+        Log.d("Recommendation", "Post ${scoredPost.post.id} by ${scoredPost.post.user.username}: " +
+                "Score=${scoredPost.score}, Likes=${scoredPost.metrics.likeCount}, " +
+                "Comments=${scoredPost.metrics.commentCount}, " +
+                "AuthorEngagement=${scoredPost.metrics.authorEngagement}")
+    }
+    
+    onComplete(recommendedPosts)
+}
+
+// Data classes needed for recommendation algorithm (copied from DiscoveryPage)
+data class FeedPostWithCounts(
+    val post: FeedPost, 
+    val likeCount: Int,
+    val commentCount: Int
+)
+
+data class ScoredPost(
+    val post: FeedPost,
+    val metrics: PostMetrics,
+    val score: Float
+)
