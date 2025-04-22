@@ -5,11 +5,13 @@ import android.util.Base64
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -63,9 +67,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
 fun ProfilePage(navController: NavController) {
@@ -111,6 +112,9 @@ fun ProfilePage(navController: NavController) {
         currImage = uri
         imgurImageURL = null
     }
+
+    // Add a new state variable for badges
+    var badges by remember { mutableStateOf(listOf("Badge 1", "Badge 2", "Badge 3")) }
 
     suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
         val contentResolver = context.contentResolver
@@ -303,6 +307,30 @@ fun ProfilePage(navController: NavController) {
                 passwordChangeError = "Failed to update password: ${e.message}"
             } finally {
                 isPasswordChanging = false
+            }
+        }
+    }
+
+    // Add a new composable for the badge board
+    @Composable
+    fun BadgeBoard(badges: List<String>) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Row(
+                modifier = Modifier.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                badges.forEach { badge ->
+                    Text(
+                        text = badge,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
             }
         }
     }
@@ -596,6 +624,9 @@ fun ProfilePage(navController: NavController) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Badge Board
+                BadgeBoard(badges = badges)
 
                 // Username
                 OutlinedTextField(
