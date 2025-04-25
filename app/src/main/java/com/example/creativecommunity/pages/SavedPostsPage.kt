@@ -9,30 +9,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.Post
-import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.models.SavedPost
+import com.example.creativecommunity.models.UserInfo
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import androidx.compose.runtime.DisposableEffect
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -51,7 +48,8 @@ data class PostEntity(
 data class UserEntity(
     val id: Int,
     val username: String,
-    val profile_image: String? = null
+    val profile_image: String? = null,
+    val auth_id: String
 )
 
 @Serializable
@@ -78,6 +76,7 @@ data class PostData(
     val created_at: String,
     val username: String = "",
     val profile_image: String = "",
+    val author_id: String = "",
     var like_count: Int = 0,
     var comment_count: Int = 0
 )
@@ -88,19 +87,14 @@ fun SavedPostsPage(navController: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
     var savedPosts by remember { mutableStateOf<List<PostData>>(emptyList()) }
     
-    // Add refresh counter that increments when screen is focused
     val refreshCounter = remember { mutableStateOf(0) }
     
-    // Use DisposableEffect to detect when screen is focused/unfocused
     DisposableEffect(Unit) {
-        // This could be replaced with actual navigation listener in a real app
-        // For now we'll just refresh once when the screen loads
         refreshCounter.value++
         
         onDispose { /* cleanup if needed */ }
     }
     
-    // Helper function to get the integer user ID from auth ID
     suspend fun getUserIdFromAuth(authId: String): Int? {
         return try {
             Log.d("SavedPosts", "Looking up user ID for auth ID: $authId")
@@ -129,28 +123,18 @@ fun SavedPostsPage(navController: NavController) {
         }
     }
     
-    // Helper function to load saved posts
     suspend fun loadSavedPosts(callback: (List<PostData>, String?) -> Unit) {
         try {
             val client = SupabaseClient.client
-            val authId = client.auth.currentUserOrNull()?.id ?: ""
+            val currentUserAuthId = client.auth.currentUserOrNull()?.id ?: ""
             
-            if (authId.isNotEmpty()) {
-                val userId = getUserIdFromAuth(authId)
+            if (currentUserAuthId.isNotEmpty()) {
+                val currentUserId = getUserIdFromAuth(currentUserAuthId)
                 
-                if (userId != null) {
-                    Log.d("SavedPosts", "Found numeric user ID: $userId for auth ID: $authId")
-                    
-                    // Get saved post IDs
+                if (currentUserId != null) {
                     val savedPostsResponse = client.postgrest["saved_posts"]
-                        .select {
-                            filter {
-                                eq("user_id", userId)
-                            }
-                        }
-                    
+                        .select { filter { eq("user_id", currentUserId) } }
                     val savedPostsEntries = savedPostsResponse.decodeList<SavedPost>()
-                    Log.d("SavedPosts", "Found ${savedPostsEntries.size} saved posts")
                     
                     if (savedPostsEntries.isEmpty()) {
                         callback(emptyList(), null)
@@ -158,119 +142,97 @@ fun SavedPostsPage(navController: NavController) {
                     }
                     
                     val postIds = savedPostsEntries.map { it.post_id }
-                    Log.d("SavedPosts", "Post IDs: $postIds")
                     
-                    // Get the actual posts
-                    val postsResponse = client.postgrest["posts"]
-                        .select {
-                            filter {
-                                if (postIds.isNotEmpty()) {
-                                    eq("id", postIds.first())
-                                    
-                                    // Add OR conditions for additional post IDs
-                                    for (postId in postIds.drop(1)) {
-                                        or {
-                                            eq("id", postId)
-                                        }
-                                    }
+                    // Fetch posts one by one instead of using in filter
+                    val posts = mutableListOf<PostEntity>()
+                    for (postId in postIds) {
+                        try {
+                            val postResponse = client.postgrest["posts"]
+                                .select {
+                                    filter { eq("id", postId) }
                                 }
+                            val post = postResponse.decodeSingleOrNull<PostEntity>()
+                            if (post != null) {
+                                posts.add(post)
                             }
+                        } catch (e: Exception) {
+                            Log.e("SavedPosts", "Error fetching post $postId", e)
                         }
-                    
-                    val posts = postsResponse.decodeList<PostEntity>()
-                    Log.d("SavedPosts", "Found ${posts.size} posts")
-                    
-                    // Debug post structure
-                    posts.forEachIndexed { index, post ->
-                        Log.d("SavedPosts", "Post $index structure: id=${post.id}, user_id=${post.user_id}, " +
-                                "caption=${post.caption}, content=${post.content}, image_url=${post.image_url}")
                     }
                     
-                    // Process each post to get user data and counts
-                    val postsWithUserData = posts.map { post ->
-                        val postId = post.id
-                        val postUserId = post.user_id
-                        
-                        // Get user info
-                        val userResponse = client.postgrest["users"]
-                            .select {
-                                filter {
-                                    eq("id", postUserId)
+                    // Create a map of user data as we process posts
+                    val usersDataMap = mutableMapOf<Int, UserEntity>()
+                    for (post in posts) {
+                        if (!usersDataMap.containsKey(post.user_id)) {
+                            try {
+                                val userResponse = client.postgrest["users"]
+                                    .select(columns = Columns.list("id", "username", "profile_image", "auth_id", "email")) {
+                                        filter { eq("id", post.user_id) }
+                                    }
+                                val user = userResponse.decodeSingleOrNull<UserEntity>()
+                                if (user != null) {
+                                    usersDataMap[post.user_id] = user
                                 }
+                            } catch (e: Exception) {
+                                Log.e("SavedPosts", "Error fetching user ${post.user_id}", e)
                             }
+                        }
+                    }
+                    
+                    val postsWithDetails = posts.map { post ->
+                        val userData = usersDataMap[post.user_id]
                         
-                        val userData = userResponse.decodeList<UserEntity>().firstOrNull()
-                        
-                        // Get like count
                         val likeCountResponse = client.postgrest["likes"]
                             .select {
-                                filter {
-                                    eq("post_id", postId)
-                                }
+                                filter { eq("post_id", post.id) }
                             }
-                        val likeList = likeCountResponse.decodeList<LikeEntity>()
-                        val likeCount = likeList.size
+                        val likeCount = likeCountResponse.decodeList<LikeEntity>().size
                         
-                        // Get comment count
                         val commentCountResponse = client.postgrest["comments"]
                             .select {
-                                filter {
-                                    eq("post_id", postId)
-                                }
+                                filter { eq("post_id", post.id) }
                             }
-                        val commentList = commentCountResponse.decodeList<CommentEntity>()
-                        val commentCount = commentList.size
-                        
-                        // Use caption or content as the text to display
-                        val postText = post.caption ?: post.content ?: ""
+                        val commentCount = commentCountResponse.decodeList<CommentEntity>().size
                         
                         PostData(
-                            id = postId,
-                            user_id = postUserId,
+                            id = post.id,
+                            user_id = post.user_id,
                             prompt_id = post.prompt_id,
                             image_url = post.image_url,
-                            caption = postText,
+                            caption = post.caption ?: post.content ?: "",
                             created_at = post.created_at ?: "",
                             username = userData?.username ?: "Unknown User",
                             profile_image = userData?.profile_image ?: "",
+                            author_id = userData?.auth_id ?: "",
                             like_count = likeCount,
                             comment_count = commentCount
                         )
                     }
                     
-                    callback(postsWithUserData, null)
+                    callback(postsWithDetails, null)
                 } else {
-                    Log.e("SavedPosts", "Could not find user ID for auth ID: $authId")
                     callback(emptyList(), "Could not find your user account.")
                 }
             } else {
-                Log.e("SavedPosts", "No auth ID available")
                 callback(emptyList(), "Please sign in to view saved posts.")
             }
         } catch (e: Exception) {
-            Log.e("SavedPosts", "Error loading saved posts: ${e.message}", e)
-            callback(emptyList(), "Failed to load saved posts: ${e.message}")
-        }
-    }
-    
-    // Load saved posts whenever refresh counter changes
-    LaunchedEffect(refreshCounter.value) {
-        isLoading = true
-        error = null
-        
-        loadSavedPosts { posts, errorMessage ->
-            savedPosts = posts
-            error = errorMessage
-            isLoading = false
-            
-            Log.d("SavedPosts", "Loaded ${posts.size} saved posts")
+            Log.e("SavedPosts", "Error loading saved posts", e)
+            callback(emptyList(), "Error loading saved posts: ${e.message}")
         }
     }
 
+    LaunchedEffect(refreshCounter.value) {
+        isLoading = true
+        loadSavedPosts { posts, err ->
+            savedPosts = posts
+            error = err
+            isLoading = false
+        }
+    }
+    
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier = Modifier.fillMaxSize().padding(16.dp)
     ) {
         when {
             isLoading -> {
@@ -289,46 +251,31 @@ fun SavedPostsPage(navController: NavController) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = "Saved Posts",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-                    
-                    Text(
-                        text = "You haven't saved any posts yet.",
-                        modifier = Modifier.padding(top = 32.dp)
-                    )
+                    Text("No saved posts yet.")
                 }
             }
             else -> {
-                LazyColumn {
-                    item {
-                        Text(
-                            text = "Saved Posts",
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
-                    }
-                    
-                    items(savedPosts) { post ->
-                        Post(
-                            postId = post.id,
-                            profileImage = post.profile_image,
-                            username = post.username,
-                            postImage = post.image_url,
-                            caption = post.caption,
-                            likeCount = post.like_count,
-                            commentCount = post.comment_count,
-                            onCommentClicked = {
-                                navController.navigate("individual_post/${post.id}")
-                            },
-                            onProfileClick = {
-                                // TODO: Navigate to user profile
-                            }
-                        )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Text("Saved Posts", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp))
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(savedPosts, key = { it.id }) { postData ->
+                            Post(
+                                navController = navController,
+                                authorId = postData.author_id,
+                                postId = postData.id,
+                                profileImage = postData.profile_image,
+                                username = postData.username,
+                                postImage = postData.image_url,
+                                caption = postData.caption,
+                                likeCount = postData.like_count,
+                                commentCount = postData.comment_count,
+                                onCommentClicked = { navController.navigate("individual_post/${postData.id}") },
+                                onImageClick = { navController.navigate("individual_post/${postData.id}") }
+                            )
+                            Divider()
+                        }
                     }
                 }
             }

@@ -35,6 +35,8 @@ import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.material3.Divider
+import io.github.jan.supabase.postgrest.query.Columns
 
 @Serializable
 data class MyPostEntity(
@@ -46,12 +48,6 @@ data class MyPostEntity(
     val content: String? = null,
     val created_at: String? = null,
     val category: String? = null
-)
-
-@Serializable
-data class PostUserData(
-    val profile_image: String? = null,
-    val username: String
 )
 
 @Serializable
@@ -79,25 +75,23 @@ data class MyPostData(
     val caption: String,
     val username: String,
     val profile_image: String,
+    val author_id: String,
     var like_count: Int = 0,
     var comment_count: Int = 0
 )
 
 @Composable
-fun UserPostsPage(
+fun MyPostsPage(
     navController: NavController,
-    userId: Int? = null, // If null, will use current user's ID
-    title: String = "Posts",
-    onProfileClick: () -> Unit = {}
+    userId: Int? = null,
+    title: String = "My Posts"
 ) {
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var myPosts by remember { mutableStateOf<List<MyPostData>>(emptyList()) }
     
-    // Refresh counter for handling screen refreshes
     val refreshCounter = remember { mutableStateOf(0) }
     
-    // Helper function to get the integer user ID from auth ID
     suspend fun getUserIdFromAuth(authId: String): Int? {
         return try {
             Log.d("MyPosts", "Looking up user ID for auth ID: $authId")
@@ -126,75 +120,45 @@ fun UserPostsPage(
         }
     }
     
-    // Load my posts
     LaunchedEffect(refreshCounter.value) {
         isLoading = true
         error = null
         
         try {
             val client = SupabaseClient.client
-            val targetUserId = userId ?: run {
-                val currentUser = client.auth.currentUserOrNull()
-                if (currentUser != null) {
-                    getUserIdFromAuth(currentUser.id)
-                } else {
-                    null
-                }
-            }
+            val currentUserAuthId = client.auth.currentUserOrNull()?.id
+            val targetUserId = userId ?: if (currentUserAuthId != null) getUserIdFromAuth(currentUserAuthId) else null
             
             if (targetUserId != null) {
-                // Get all posts by this user
                 val postsResponse = client.postgrest["posts"]
                     .select {
-                        filter {
-                            eq("user_id", targetUserId)
-                        }
+                        filter { eq("user_id", targetUserId) }
                         order("created_at", Order.DESCENDING)
                     }
-                
                 val posts = postsResponse.decodeList<MyPostEntity>()
                 Log.d("MyPosts", "Found ${posts.size} posts by user $targetUserId")
                 
-                // Debug post structure
-                posts.forEachIndexed { index, post ->
-                    Log.d("MyPosts", "Post $index structure: id=${post.id}, user_id=${post.user_id}, " +
-                            "caption=${post.caption}, content=${post.content}, image_url=${post.image_url}")
-                }
-                
-                // Get user data
                 val userResponse = client.postgrest["users"]
-                    .select {
-                        filter {
-                            eq("id", targetUserId)
-                        }
+                    .select(columns = Columns.list("id", "username", "profile_image", "bio", "auth_id")) {
+                        filter { eq("id", targetUserId) }
                     }
                 
-                val userData = userResponse.decodeList<PostUserData>().firstOrNull()
+                val userData = userResponse.decodeSingleOrNull<UserInfo>()
                 
                 if (userData != null) {
-                    // Transform posts to display format
                     val formattedPosts = posts.map { post ->
-                        // Get like count for each post
                         val likeCountResponse = client.postgrest["likes"]
                             .select {
-                                filter {
-                                    eq("post_id", post.id)
-                                }
+                                filter { eq("post_id", post.id) }
                             }
-                        val likeList = likeCountResponse.decodeList<LikeData>()
-                        val likeCount = likeList.size
+                        val likeCount = likeCountResponse.decodeList<LikeData>().size
                         
-                        // Get comment count for each post
                         val commentCountResponse = client.postgrest["comments"]
                             .select {
-                                filter {
-                                    eq("post_id", post.id)
-                                }
+                                filter { eq("post_id", post.id) }
                             }
-                        val commentList = commentCountResponse.decodeList<CommentData>()
-                        val commentCount = commentList.size
+                        val commentCount = commentCountResponse.decodeList<CommentData>().size
                         
-                        // Use caption or content as the text to display
                         val postText = post.caption ?: post.content ?: ""
                         
                         MyPostData(
@@ -203,6 +167,7 @@ fun UserPostsPage(
                             caption = postText,
                             username = userData.username,
                             profile_image = userData.profile_image ?: "",
+                            author_id = userData.auth_id,
                             like_count = likeCount,
                             comment_count = commentCount
                         )
@@ -211,10 +176,12 @@ fun UserPostsPage(
                     myPosts = formattedPosts
                     Log.d("MyPosts", "Loaded ${formattedPosts.size} formatted posts")
                 } else {
-                    error = "Could not find user data"
+                    error = "Could not find user data for ID: $targetUserId"
+                    Log.e("MyPosts", "Could not find user data for ID: $targetUserId")
                 }
             } else {
-                error = "Could not determine user ID"
+                error = "Could not determine user ID (current user might be null)"
+                Log.e("MyPosts", "Could not determine user ID")
             }
         } catch (e: Exception) {
             error = "Error loading posts: ${e.message}"
@@ -261,40 +228,28 @@ fun UserPostsPage(
                 }
             }
             else -> {
-                LazyColumn {
-                    item {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
-                    }
-                    
-                    items(myPosts) { post ->
-                        Post(
-                            postId = post.id,
-                            profileImage = post.profile_image,
-                            username = post.username,
-                            postImage = post.image_url,
-                            caption = post.caption,
-                            likeCount = post.like_count,
-                            commentCount = post.comment_count,
-                            onCommentClicked = {
-                                navController.navigate("individual_post/${post.id}")
-                            },
-                            onProfileClick = onProfileClick
-                        )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Text(text = title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp))
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(myPosts) { postData ->
+                            Post(
+                                navController = navController,
+                                authorId = postData.author_id,
+                                postId = postData.id,
+                                profileImage = postData.profile_image,
+                                username = postData.username,
+                                postImage = postData.image_url,
+                                caption = postData.caption,
+                                likeCount = postData.like_count,
+                                commentCount = postData.comment_count,
+                                onCommentClicked = { navController.navigate("individual_post/${postData.id}") },
+                                onImageClick = { navController.navigate("individual_post/${postData.id}") }
+                            )
+                            Divider()
+                        }
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-fun MyPostsPage(navController: NavController) {
-    UserPostsPage(
-        navController = navController,
-        title = "My Posts"
-    )
 } 

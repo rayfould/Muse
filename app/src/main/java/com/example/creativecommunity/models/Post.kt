@@ -38,6 +38,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import androidx.navigation.NavController
 
 @Serializable
 data class UserInfo(
@@ -97,16 +98,17 @@ private suspend fun getUserIdFromAuth(authId: String): Int? {
 // Write it here to reuse both in the feed and for individual post page
 @Composable
 fun Post(
-    postId: Int = 0, // Change to Int with default value 0
+    navController: NavController,
+    authorId: String,
+    postId: Int = 0,
     profileImage: String,
     username: String,
     postImage: String,
     caption: String,
-    likeCount: Int, // Initial like count (only used if we can't fetch from DB)
+    likeCount: Int,
     commentCount: Int,
-    onCommentClicked: () -> Unit = {}, // --> create a comment....? create this action later
-    onProfileClick: () -> Unit = {}, // Add this parameter
-    onImageClick: () -> Unit = {} // Add parameter for post image click
+    onCommentClicked: () -> Unit = {},
+    onImageClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -116,7 +118,7 @@ fun Post(
     
     // Get current user
     val currentUser = remember { SupabaseClient.client.auth.currentUserOrNull() }
-    val userId = remember { currentUser?.id ?: "" }
+    val currentUserId = remember { currentUser?.id ?: "" }
     
     // State for likes
     var isLiked by remember { mutableStateOf(false) }
@@ -130,21 +132,21 @@ fun Post(
     val refreshKey = remember { mutableStateOf(0) }
     
     // Initial data loading with refreshKey
-    LaunchedEffect(userId, postId, refreshKey.value) {
-        if (userId.isNotEmpty() && postId > 0) {
+    LaunchedEffect(currentUserId, postId, refreshKey.value) {
+        if (currentUserId.isNotEmpty() && postId > 0) {
             // Get actual like count first
             val likeCountValue = likeManager.getLikeCount(postId)
             currentLikeCount = likeCountValue
             
             // Then check if user has liked this post
-            isLiked = likeManager.isPostLikedByUser(userId, postId)
+            isLiked = likeManager.isPostLikedByUser(currentUserId, postId)
             
             // Check if post is saved
             try {
                 val client = SupabaseClient.client
                 
                 // Get numeric user ID first
-                val numericUserId = getUserIdFromAuth(userId)
+                val numericUserId = getUserIdFromAuth(currentUserId)
                 if (numericUserId != null) {
                     Log.d("SavePost", "Checking save status for post $postId with user_id $numericUserId")
                     
@@ -169,7 +171,7 @@ fun Post(
                         Log.d("SavePost", "Save status changed from $wasSavedBefore to $isSaved")
                     }
                 } else {
-                    Log.e("SavePost", "Could not find numeric user ID for auth_id $userId")
+                    Log.e("SavePost", "Could not find numeric user ID for auth_id $currentUserId")
                 }
             } catch (e: Exception) {
                 Log.e("SavePost", "Error checking if post is saved: ${e.message}", e)
@@ -203,7 +205,7 @@ fun Post(
     
     // Handle like button press
     val toggleLike = {
-        if (userId.isNotEmpty() && postId > 0) {
+        if (currentUserId.isNotEmpty() && postId > 0) {
             val newLikedState = !isLiked
             isLiked = newLikedState
             
@@ -212,27 +214,27 @@ fun Post(
             
             // Queue the like/unlike for batch processing
             coroutineScope.launch {
-                likeManager.queueLike(userId, postId, newLikedState)
+                likeManager.queueLike(currentUserId, postId, newLikedState)
             }
         }
     }
     
     // Handle save button press
     val toggleSave = {
-        if (userId.isNotEmpty() && postId > 0) {
+        if (currentUserId.isNotEmpty() && postId > 0) {
             val newSavedState = !isSaved
             isSaved = newSavedState
             
-            Log.d("SavePost", "Attempting to ${if (newSavedState) "save" else "unsave"} post $postId for auth_id $userId")
+            Log.d("SavePost", "Attempting to ${if (newSavedState) "save" else "unsave"} post $postId for auth_id $currentUserId")
             
             coroutineScope.launch {
                 try {
                     val client = SupabaseClient.client
                     
                     // Get numeric user ID first
-                    val numericUserId = getUserIdFromAuth(userId)
+                    val numericUserId = getUserIdFromAuth(currentUserId)
                     if (numericUserId == null) {
-                        Log.e("SavePost", "Could not find numeric user ID for auth_id $userId")
+                        Log.e("SavePost", "Could not find numeric user ID for auth_id $currentUserId")
                         isSaved = !newSavedState // Revert UI state
                         return@launch
                     }
@@ -255,10 +257,10 @@ fun Post(
                             Log.d("SavePost", "Post $postId is already saved by user $numericUserId, skipping insert")
                         } else {
                             // Post is not already saved, proceed with insert
-                            Log.d("SavePost", "Inserting into saved_posts: auth_id=$userId, user_id=$numericUserId, post_id=$postId")
+                            Log.d("SavePost", "Inserting into saved_posts: auth_id=$currentUserId, user_id=$numericUserId, post_id=$postId")
                             
                             val savedPost = SavedPost(
-                                auth_id = userId,
+                                auth_id = currentUserId,
                                 userId = numericUserId,
                                 post_id = postId
                             )
@@ -268,7 +270,7 @@ fun Post(
                         }
                     } else {
                         // Unsave the post - use either auth_id or user_id depending on your database constraints
-                        Log.d("SavePost", "Deleting from saved_posts: auth_id=$userId, post_id=$postId")
+                        Log.d("SavePost", "Deleting from saved_posts: auth_id=$currentUserId, post_id=$postId")
                         
                         val result = client.postgrest["saved_posts"].delete {
                             filter {
@@ -289,7 +291,7 @@ fun Post(
                 }
             }
         } else {
-            Log.w("SavePost", "Cannot save: userId empty or postId <= 0. userId=$userId, postId=$postId")
+            Log.w("SavePost", "Cannot save: currentUserId empty or postId <= 0. currentUserId=$currentUserId, postId=$postId")
         }
     }
     
@@ -302,15 +304,30 @@ fun Post(
         }
     }
 
+    // Click handler for profile navigation
+    val navigateToProfile = {
+        // Prevent navigation if authorId is missing (should not happen ideally)
+        if (authorId.isNotEmpty()) {
+            // Avoid navigating to own profile page from here, use main profile button instead?
+            // Or allow it, maybe show ViewProfilePage even for self?
+            // For now, let's allow navigating to self via this method.
+            navController.navigate("user/$authorId")
+        } else {
+            Log.w("PostComposable", "Attempted to navigate to profile but authorId is empty.")
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp)
     ) {
-        // Profile image and username
+        // Profile image and username - Make Row clickable
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp)
+            modifier = Modifier
+                .padding(horizontal = 10.dp)
+                .clickable { navigateToProfile() }
         ) {
             AsyncImage(
                 model = profileImage,
@@ -318,8 +335,7 @@ fun Post(
                 modifier = Modifier
                     .height(40.dp)
                     .width(40.dp)
-                    .clip(CircleShape)
-                    .clickable { onProfileClick() },
+                    .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(10.dp))

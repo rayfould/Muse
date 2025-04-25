@@ -1,9 +1,6 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
-import androidx.compose.animation.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -48,7 +44,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.Post
-import com.example.creativecommunity.models.UserData
+import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.utils.LikeManager
 import com.example.creativecommunity.utils.PromptRotation
 import com.example.creativecommunity.utils.PromptWithDates
@@ -56,16 +52,11 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.random.Random
-import com.example.creativecommunity.models.RecommendationEngine
-import com.example.creativecommunity.models.DiscoveryPost
-import com.example.creativecommunity.models.DiscoveryPostWithCounts
-import com.example.creativecommunity.models.PostMetrics
+import org.w3c.dom.Comment
 
 @Serializable
 data class Prompt(
@@ -77,7 +68,8 @@ data class FeedPost(
     val id: Int,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
-    @SerialName("users") val user: UserData
+    @SerialName("users") val user: UserInfo,
+    @SerialName("created_at") val created_at: String? = null
 )
 
 // Data class to hold post with its like count for sorting (same as in DiscoveryPage)
@@ -137,26 +129,29 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 
-    // Fetch posts
+    // Fetch posts (select created_at)
     LaunchedEffect(category) {
+        isLoading = true 
+        fetchError = null
         try {
             val fetchedPosts = withContext(Dispatchers.IO) {
                 val result = SupabaseClient.client.postgrest.from("posts")
-                    .select(Columns.raw("id, image_url, content, user_id, users!inner(profile_image, username)")) {
-                        filter {
-                            eq("category", category)
-                        }
+                    .select(Columns.raw("id, image_url, content, created_at, user_id, users!inner(id, username, email, profile_image, auth_id)")) {
+                        filter { eq("category", category) }
                         order("created_at", Order.DESCENDING)
-                        limit(10)
                     }
                 val postsList = result.decodeList<FeedPost>()
-                Log.d("SupabaseTest", "Fetched posts: $postsList")
+                Log.d("CategoryFeed", "Fetched ${postsList.size} posts for category: $category")
                 postsList
             }
             posts = fetchedPosts
-            displayedPosts = fetchedPosts // Initialize displayed posts with all posts
+            displayedPosts = fetchedPosts 
+            selectedSortOption = "Recent"
         } catch (e: Exception) {
             fetchError = "Failed to load posts: ${e.message}"
+            Log.e("CategoryFeed", "Failed to load posts", e)
+        } finally {
+            isLoading = false
         }
     }
 
@@ -200,12 +195,39 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 
+    // Sorting logic (Fix Recent sort, use direct logic)
+    val sortPosts: (String) -> Unit = { sortOption ->
+        coroutineScope.launch {
+            isLoading = true
+            try {
+                displayedPosts = when (sortOption) {
+                    "Recent" -> posts.sortedByDescending { it.created_at }
+                    "Popular" -> {
+                        val postsWithLikes = posts.map { post ->
+                            val likeCount = likeManager.getLikeCount(post.id)
+                            FeedPostWithLikes(post, likeCount)
+                        }
+                        postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
+                    }
+                    "Trending" -> {
+                        posts.sortedByDescending { it.created_at }
+                    }
+                    else -> posts
+                }
+            } catch (e: Exception) {
+                fetchError = "Failed to sort posts: ${e.message}"
+                Log.e("CategoryFeed", "Sort error", e)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(15.dp)
     ) {
-        // Main content with LazyColumn that includes the header and prompt
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -213,8 +235,8 @@ fun CategoryFeed(navController: NavController, category: String) {
                 .padding(bottom = 80.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header item
-            item {
+            // Item 1: Header and Prompt Card
+            item(key = "header_prompt") {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -231,7 +253,6 @@ fun CategoryFeed(navController: NavController, category: String) {
                 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Prompt Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -295,148 +316,93 @@ fun CategoryFeed(navController: NavController, category: String) {
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                // Sort button and dropdown - moved below the prompt card
-                Box(
+            }
+
+            // Item 2: Sort dropdown (Correctly placed as its own item)
+            item(key = "sort_dropdown") {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 16.dp, vertical = 0.dp),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Button(
-                        onClick = { showSortDropdown = true },
-                        enabled = !isLoading
-                    ) {
-                        Text("Sort by: $selectedSortOption")
-                    }
-                    
-                    DropdownMenu(
-                        expanded = showSortDropdown,
-                        onDismissRequest = { showSortDropdown = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Recent") },
-                            onClick = {
-                                selectedSortOption = "Recent"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    delay(300) // Small delay for animation
-                                    displayedPosts = posts
-                                    isLoading = false
-                                }
+                    Box {
+                        Button(onClick = { showSortDropdown = true }, enabled = !isLoading) {
+                            Text("Sort by: $selectedSortOption")
+                        }
+                        DropdownMenu(
+                            expanded = showSortDropdown,
+                            onDismissRequest = { showSortDropdown = false }
+                        ) {
+                            listOf("Recent", "Popular", "Trending").forEach { option ->
+                                DropdownMenuItem(text = {Text(option)}, onClick = { 
+                                    selectedSortOption = option
+                                    showSortDropdown = false
+                                    sortPosts(option)
+                                 })
                             }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Most Liked") },
-                            onClick = {
-                                selectedSortOption = "Most Liked"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    // Fetch like counts for all posts and sort
-                                    fetchAndSortPostsByLikes(posts, likeManager) { sortedPosts ->
-                                        displayedPosts = sortedPosts
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Recommended") },
-                            onClick = {
-                                selectedSortOption = "Recommended"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    // Use our recommendation algorithm
-                                    fetchAndScorePosts(posts, likeManager) { recommendedPosts ->
-                                        displayedPosts = recommendedPosts
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Random") },
-                            onClick = {
-                                selectedSortOption = "Random"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    delay(300) // Small delay for animation
-                                    displayedPosts = posts.shuffled(Random(System.currentTimeMillis()))
-                                    isLoading = false
-                                }
-                            }
-                        )
+                        }
                     }
                 }
-                
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Loading indicator
-            item {
-                AnimatedVisibility(
-                    visible = isLoading,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .size(48.dp)
-                    )
-                }
+            // Item 3: Loading/Error/Empty state 
+            item(key = "status_indicator") {
+                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    when {
+                         isLoading -> CircularProgressIndicator() 
+                         fetchError != null -> Text(fetchError!!, color = MaterialTheme.colorScheme.error)
+                         posts.isEmpty() && !isLoading -> Text("No posts yet in this category.")
+                    }
+                 }
             }
 
-            // Show error or empty state
-            if (fetchError != null) {
-                item {
-                    Text(text = fetchError!!)
-                }
-            } else if (posts.isEmpty()) {
-                item {
-                    Text(text = "No posts yet for this category.")
-                }
-            } else {
-                // Posts list
-                items(
-                    items = displayedPosts,
-                    key = { it.id } // Use id as key for better stability
-                ) { post ->
-                    val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
-                    AnimatedVisibility(
-                        visible = !isLoading,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Post(
-                            postId = post.id,
-                            profileImage = defaultPfp,
-                            username = post.user.username ?: "Unknown User",
-                            postImage = post.image_url,
-                            caption = post.content,
-                            likeCount = 0,
-                            commentCount = 0,
-                            onCommentClicked = {
-                                navController.navigate("individual_post/${post.id}")
-                            },
-                            onProfileClick = {
-                                selectedPfpUrl = defaultPfp
-                                showPfpDialog = true
-                            },
-                            onImageClick = {
-                                selectedPostImageUrl = post.image_url
-                                showPostImageDialog = true
+            // Items 4...N: Display Posts list
+            items(displayedPosts, key = { it.id }) { post ->
+                var likeCount by remember { mutableStateOf(0) }
+                var commentCount by remember { mutableStateOf(0) }
+                
+                LaunchedEffect(post.id) {
+                    likeCount = likeManager.getLikeCount(post.id)
+                    try {
+                        // Get all comments and count them, just like we do with likes
+                        val comments = SupabaseClient.client.postgrest
+                            .from("comments")
+                            .select {
+                                filter { eq("post_id", post.id) }
                             }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                            .decodeList<Comment>()
+                        commentCount = comments.size
+                        Log.d("CategoryFeed", "Post ${post.id} comment count: $commentCount")
+                    } catch (e: Exception) {
+                        Log.e("CategoryFeed", "Failed to get comment count for post ${post.id}", e)
                     }
                 }
+
+                Post(
+                    navController = navController,
+                    authorId = post.user.auth_id,
+                    postId = post.id,
+                    profileImage = post.user.profile_image ?: defaultProfileImages.random(),
+                    username = post.user.username,
+                    postImage = post.image_url,
+                    caption = post.content, 
+                    likeCount = likeCount, 
+                    commentCount = commentCount, 
+                    onCommentClicked = { navController.navigate("individual_post/${post.id}") },
+                    onImageClick = { 
+                        selectedPostImageUrl = post.image_url
+                        showPostImageDialog = true
+                    }
+                )
+                 Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Footer item 
+            item(key = "footer_spacer") {
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
 
@@ -465,110 +431,3 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 }
-
-// Function to fetch like counts and sort posts by likes (copied from DiscoveryPage)
-private suspend fun fetchAndSortPostsByLikes(
-    posts: List<FeedPost>,
-    likeManager: LikeManager,
-    onComplete: (List<FeedPost>) -> Unit
-) {
-    val postsWithLikes = mutableListOf<FeedPostWithLikes>()
-    
-    for (post in posts) {
-        val likeCount = likeManager.getLikeCount(post.id)
-        postsWithLikes.add(FeedPostWithLikes(post, likeCount))
-    }
-    
-    // Sort by like count (descending)
-    val sortedPosts = postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
-    
-    onComplete(sortedPosts)
-}
-
-// Function to fetch metrics, score and sort posts by the recommendation algorithm (copied from DiscoveryPage)
-private suspend fun fetchAndScorePosts(
-    posts: List<FeedPost>,
-    likeManager: LikeManager,
-    onComplete: (List<FeedPost>) -> Unit
-) {
-    // First, collect like and comment counts for all posts
-    val postsWithCounts = mutableListOf<FeedPostWithCounts>()
-    
-    for (post in posts) {
-        val likeCount = likeManager.getLikeCount(post.id)
-        // For simplicity, we'll generate random comment counts
-        // In a real app, you would fetch this from your database
-        val commentCount = (0..5).random() // Simplified for demo
-        
-        postsWithCounts.add(FeedPostWithCounts(post, likeCount, commentCount))
-    }
-    
-    // Convert FeedPostWithCounts to DiscoveryPostWithCounts for compatibility with RecommendationEngine
-    val discoveryPostsWithCounts = postsWithCounts.map { feedPostWithCounts ->
-        // Create a DiscoveryPost from FeedPost
-        val discoveryPost = DiscoveryPost(
-            id = feedPostWithCounts.post.id,
-            image_url = feedPostWithCounts.post.image_url,
-            content = feedPostWithCounts.post.content,
-            category = "", // Not used for recommendation algorithm
-            user = feedPostWithCounts.post.user,
-            created_at = null
-        )
-        
-        // Create a DiscoveryPostWithCounts with the converted post and the same counts
-        DiscoveryPostWithCounts(
-            post = discoveryPost,
-            likeCount = feedPostWithCounts.likeCount,
-            commentCount = feedPostWithCounts.commentCount
-        )
-    }
-    
-    // Compute author engagement metrics using converted posts
-    val authorEngagement = RecommendationEngine.computeAuthorEngagement(discoveryPostsWithCounts)
-    
-    // Create metrics for each post and score them
-    val scoredPosts = postsWithCounts.map { postWithCounts ->
-        val username = postWithCounts.post.user.username ?: ""
-        val engagement = authorEngagement[username] ?: 0f
-        
-        // Convert timestamp string to long if available, or use current time
-        val createdAt = System.currentTimeMillis() // Default to current time
-        
-        val metrics = PostMetrics(
-            postId = postWithCounts.post.id,
-            likeCount = postWithCounts.likeCount,
-            commentCount = postWithCounts.commentCount,
-            authorEngagement = engagement,
-            createdAt = createdAt
-        )
-        
-        val score = RecommendationEngine.score(metrics)
-        ScoredPost(postWithCounts.post, metrics, score)
-    }
-    
-    // Sort by score (descending)
-    val recommendedPosts = scoredPosts.sortedByDescending { it.score }.map { it.post }
-    
-    // Log the scores for debugging
-    scoredPosts.sortedByDescending { it.score }.take(5).forEach { scoredPost ->
-        Log.d("Recommendation", "Post ${scoredPost.post.id} by ${scoredPost.post.user.username}: " +
-                "Score=${scoredPost.score}, Likes=${scoredPost.metrics.likeCount}, " +
-                "Comments=${scoredPost.metrics.commentCount}, " +
-                "AuthorEngagement=${scoredPost.metrics.authorEngagement}")
-    }
-    
-    onComplete(recommendedPosts)
-}
-
-// Data classes needed for recommendation algorithm (copied from DiscoveryPage)
-data class FeedPostWithCounts(
-    val post: FeedPost, 
-    val likeCount: Int,
-    val commentCount: Int
-)
-
-data class ScoredPost(
-    val post: FeedPost,
-    val metrics: PostMetrics,
-    val score: Float
-)

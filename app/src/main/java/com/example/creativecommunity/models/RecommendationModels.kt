@@ -12,7 +12,7 @@ data class DiscoveryPost(
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("category") val category: String,
-    @SerialName("users") val user: UserData,
+    @SerialName("users") val user: UserInfo,
     @SerialName("created_at") val created_at: String? = null
 )
 

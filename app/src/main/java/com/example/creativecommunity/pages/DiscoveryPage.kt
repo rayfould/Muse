@@ -40,13 +40,42 @@ fun DiscoveryPage(navController: NavController) {
     var selectedSortOption by remember { mutableStateOf("Recent") }
     var isLoading by remember { mutableStateOf(false) }
     var posts by remember { mutableStateOf<List<DiscoveryPost>>(emptyList()) }
-    var postsWithLikes by remember { mutableStateOf<List<PostWithLikes>>(emptyList()) }
     var displayedPosts by remember { mutableStateOf<List<DiscoveryPost>>(emptyList()) }
     var fetchError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val likeManager = remember { LikeManager.getInstance(context) }
+
+    // Sorting logic moved inside Composable
+    val sortPosts: (String) -> Unit = { sortOption ->
+        coroutineScope.launch {
+            isLoading = true
+            try {
+                displayedPosts = when (sortOption) {
+                    "Recent" -> posts.sortedByDescending { it.created_at }
+                    "Most Liked" -> {
+                        val postsWithLikes = posts.map { post ->
+                            val likeCount = likeManager.getLikeCount(post.id)
+                            PostWithLikes(post, likeCount)
+                        }
+                        postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
+                    }
+                    "Recommended" -> {
+                        // Placeholder for recommendation logic
+                        posts.sortedByDescending { it.created_at } // Default to recent
+                    }
+                    "Random" -> posts.shuffled(Random(System.currentTimeMillis()))
+                    else -> posts
+                }
+            } catch (e: Exception) {
+                fetchError = "Failed to sort posts: ${e.message}"
+                Log.e("DiscoveryPage", "Sort error", e)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -67,7 +96,7 @@ fun DiscoveryPage(navController: NavController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Discover")
+                Text(text = "Discover", style = MaterialTheme.typography.headlineMedium)
                 
                 Box {
                     Button(
@@ -81,62 +110,13 @@ fun DiscoveryPage(navController: NavController) {
                         expanded = showSortDropdown,
                         onDismissRequest = { showSortDropdown = false }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Recent") },
-                            onClick = {
-                                selectedSortOption = "Recent"
+                        listOf("Recent", "Most Liked", "Recommended", "Random").forEach { option ->
+                             DropdownMenuItem(text = {Text(option)}, onClick = { 
+                                selectedSortOption = option
                                 showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    delay(300) // Small delay for animation
-                                    displayedPosts = posts
-                                    isLoading = false
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Most Liked") },
-                            onClick = {
-                                selectedSortOption = "Most Liked"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    // Fetch like counts for all posts and sort
-                                    fetchAndSortPostsByLikes(posts, likeManager) { sortedPosts ->
-                                        displayedPosts = sortedPosts
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Recommended") },
-                            onClick = {
-                                selectedSortOption = "Recommended"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    // Use our recommendation algorithm
-                                    fetchAndScorePosts(posts, likeManager) { recommendedPosts ->
-                                        displayedPosts = recommendedPosts
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Random") },
-                            onClick = {
-                                selectedSortOption = "Random"
-                                showSortDropdown = false
-                                isLoading = true
-                                coroutineScope.launch {
-                                    delay(300) // Small delay for animation
-                                    displayedPosts = posts.shuffled(Random(System.currentTimeMillis()))
-                                    isLoading = false
-                                }
-                            }
-                        )
+                                sortPosts(option)
+                             })
+                        }
                     }
                 }
             }
@@ -165,21 +145,27 @@ fun DiscoveryPage(navController: NavController) {
             }
 
             LaunchedEffect(Unit) {
+                isLoading = true
+                fetchError = null
                 try {
                     val fetchedPosts = withContext(Dispatchers.IO) {
                         val result = SupabaseClient.client.postgrest.from("posts")
-                            .select(Columns.raw("id, image_url, content, category, created_at, user_id, users!inner(profile_image, username)")) {
+                            .select(Columns.raw("id, image_url, content, category, created_at, user_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
                                 order("created_at", Order.DESCENDING)
-                                limit(20)  // Limit to 20 most recent posts
+                                limit(50) // Increased limit, consider pagination later
                             }
                         val postsList = result.decodeList<DiscoveryPost>()
-                        Log.d("SupabaseTest", "Fetched posts: $postsList")
+                        Log.d("DiscoveryPage", "Fetched ${postsList.size} posts")
                         postsList
                     }
                     posts = fetchedPosts
                     displayedPosts = fetchedPosts
+                    selectedSortOption = "Recent"
                 } catch (e: Exception) {
                     fetchError = "Failed to load posts: ${e.message}"
+                    Log.e("DiscoveryPage", "Failed to load posts", e)
+                } finally {
+                    isLoading = false
                 }
             }
 
@@ -214,7 +200,7 @@ fun DiscoveryPage(navController: NavController) {
                 ) {
                     items(
                         items = displayedPosts,
-                        key = { it.id } // Use id as key instead of image_url for better stability
+                        key = { it.id }
                     ) { post ->
                         val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
                         AnimatedVisibility(
@@ -223,20 +209,17 @@ fun DiscoveryPage(navController: NavController) {
                             exit = fadeOut() + shrinkVertically()
                         ) {
                             Post(
+                                navController = navController,
+                                authorId = post.user.auth_id,
                                 postId = post.id,
                                 profileImage = defaultPfp,
                                 username = post.user.username ?: "Unknown User",
                                 postImage = post.image_url,
                                 caption = "${post.content}\n\nCategory: ${post.category}",
-                                likeCount = 0, // Initial value, will be updated by Post component
+                                likeCount = 0,
                                 commentCount = 0,
-                                onCommentClicked = {
-                                    navController.navigate("individual_post/${post.id}")
-                                },
-                                onProfileClick = {
-                                    selectedPfpUrl = defaultPfp
-                                    showPfpDialog = true
-                                }
+                                onCommentClicked = { navController.navigate("individual_post/${post.id}") },
+                                onImageClick = { navController.navigate("individual_post/${post.id}") }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -319,4 +302,16 @@ private suspend fun fetchAndScorePosts(
     }
     
     onComplete(recommendedPosts)
-} 
+}
+
+// Placeholder/Removed fetchAndScorePosts - RecommendationEngine needs integration
+/*
+suspend fun fetchAndScorePosts(
+    posts: List<DiscoveryPost>,
+    likeManager: LikeManager,
+    onResult: (List<DiscoveryPost>) -> Unit
+) = withContext(Dispatchers.IO) {
+    // ... Implementation needed ...
+    onResult(posts) // Placeholder
+}
+*/ 
