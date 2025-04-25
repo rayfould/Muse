@@ -142,21 +142,6 @@ fun UserPostsPage(navController: NavController, userId: String) {
              modifier = Modifier.padding(bottom = 16.dp)
          )
 
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            shape = RoundedCornerShape(8.dp),
-            tonalElevation = 2.dp
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Badge Board", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Their earned badges will appear here soon!")
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
         when {
             isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

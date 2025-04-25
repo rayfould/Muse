@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,7 +93,20 @@ fun ViewProfilePage(navController: NavController, userId: String) {
                     Text(text = userProfile!!.username, style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(text = "[Badge Board Placeholder]", style = MaterialTheme.typography.bodyMedium)
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        tonalElevation = 2.dp
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Badge Board", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Their earned badges will appear here soon!")
+                            // TODO: Implement badge display logic based on userId
+                        }
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(text = userProfile!!.bio ?: "No bio yet.", style = MaterialTheme.typography.bodyLarge)
