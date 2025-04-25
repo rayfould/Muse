@@ -244,19 +244,22 @@ fun ProfilePage(navController: NavController) {
             isEmailChanging = true
             emailChangeError = null
             
-            // Debug log for email passed
-            Log.d("ProfilePage", "Calling auth.updateUser with email='$email'")
-            
             try {
-                withContext(Dispatchers.IO) {
+                // Update the auth table using the proper auth API
+                Log.d("ProfilePage", "Attempting to update auth email to: $email")
+                val response = withContext(Dispatchers.IO) {
                     SupabaseClient.client.auth.updateUser {
                         this.email = email
                     }
                 }
                 
-                // Then, update email in the users table
-                try {
+                Log.d("ProfilePage", "Auth update response: ${response?.toString() ?: "null"}")
+                
+                // If auth update was successful, update the users table
+                if (response != null) {
                     val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
+                    Log.d("ProfilePage", "Auth update successful, proceeding to update users table for auth_id: $authId")
+                    
                     withContext(Dispatchers.IO) {
                         SupabaseClient.client.postgrest.from("users")
                             .update({
@@ -265,19 +268,16 @@ fun ProfilePage(navController: NavController) {
                                 filter { eq("auth_id", authId) }
                             }
                     }
-                    Log.d("ProfilePage", "User table email updated successfully to: $email")
-                } catch (e: Exception) {
-                    Log.e("ProfilePage", "Failed to update email in user table: ${e.message}", e)
-                    // We don't throw here because the auth update was successful
-                    // Just log the error since the email will be verified and synced later
+                    
+                    // Show confirmation and close dialog
+                    showEmailDialog = false
+                    newEmail = ""
+                    confirmEmail = ""
+                    Log.d("ProfilePage", "Email updated successfully in both auth and users tables")
+                } else {
+                    Log.e("ProfilePage", "Auth update returned null response")
+                    throw Exception("Failed to update auth email")
                 }
-                
-                // Show confirmation and close dialog
-                showEmailDialog = false
-                newEmail = ""
-                confirmEmail = ""
-                // Show a success message (you could use a Snackbar or Toast here)
-                Log.d("ProfilePage", "Email update initiated. Verification email sent to: $email")
             } catch (e: Exception) {
                 Log.e("ProfilePage", "Error updating email: ${e.message}", e)
                 emailChangeError = "Failed to update email: ${e.message}"
