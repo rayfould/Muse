@@ -17,11 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
 // UI
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -42,7 +39,7 @@ fun MainPage(navController: NavController) {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Choose your creative community",
+            text = "Dive into your creative community",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -61,19 +58,6 @@ fun MainPage(navController: NavController) {
             Pair("FILM", "Filmmaking"),
             Pair("SCIENCE", "Science Experiments")
         )
-
-//        categoryDisplayMap.forEach { (key, displayName) ->
-//            Button(
-//                onClick = {
-//                    navController.navigate("category_feed/${key}")
-//                },
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(vertical = 4.dp)
-//            ) {
-//                Text(displayName)
-//            }
-//        }
 
         // Now using LazyVerticalGrid
         LazyVerticalGrid(
