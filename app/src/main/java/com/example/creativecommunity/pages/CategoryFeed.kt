@@ -244,34 +244,41 @@ fun CategoryFeed(navController: NavController, category: String) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(4.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "This Week's Prompt",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     when {
-                        promptLoading -> Text("Loading prompt...", style = MaterialTheme.typography.bodyMedium)
-                        promptError != null -> Text(promptError!!, color = MaterialTheme.colorScheme.error)
-                        promptData == null -> Text("No active prompt for $category", style = MaterialTheme.typography.bodyMedium)
+                        promptLoading -> Text("Loading prompt...", style = MaterialTheme.typography.bodySmall)
+                        promptError != null -> Text(promptError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        promptData == null -> Text("No active prompt for $category", style = MaterialTheme.typography.bodySmall)
                         else -> {
-                            Text(promptData!!.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = promptData!!.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
                             if (!promptData!!.description.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(promptData!!.description!!, style = MaterialTheme.typography.bodyMedium)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = promptData!!.description!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             // Posts List
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
