@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -22,6 +23,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -57,6 +61,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.w3c.dom.Comment
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Serializable
 data class Prompt(
@@ -223,211 +230,99 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(15.dp)
-    ) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 80.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Item 1: Header and Prompt Card
-            item(key = "header_prompt") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 30.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Prompt Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        text = "$category Community!",
-                        style = MaterialTheme.typography.headlineMedium,
+                        text = "This Week's Prompt",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
-                }
-                
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF5F5F5)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "THIS WEEK'S PROMPT",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color(0xFF666666),
-                            fontWeight = FontWeight.Bold
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        if (promptLoading) {
-                            Text(
-                                text = "Loading prompt...",
-                                textAlign = TextAlign.Center
-                            )
-                        } else if (promptError != null) {
-                            Text(
-                                text = promptError!!,
-                                color = Color.Red,
-                                textAlign = TextAlign.Center
-                            )
-                        } else if (promptData == null) {
-                            Text(
-                                text = "No active prompt for $category",
-                                textAlign = TextAlign.Center
-                            )
-                        } else {
-                            Text(
-                                text = promptData!!.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Display description if available
-                            promptData!!.description?.let { description ->
-                                Text(
-                                    text = description,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Item 2: Sort dropdown (Correctly placed as its own item)
-            item(key = "sort_dropdown") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 0.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Box {
-                        Button(onClick = { showSortDropdown = true }, enabled = !isLoading) {
-                            Text("Sort by: $selectedSortOption")
-                        }
-                        DropdownMenu(
-                            expanded = showSortDropdown,
-                            onDismissRequest = { showSortDropdown = false }
-                        ) {
-                            listOf("Recent", "Popular", "Trending").forEach { option ->
-                                DropdownMenuItem(text = {Text(option)}, onClick = { 
-                                    selectedSortOption = option
-                                    showSortDropdown = false
-                                    sortPosts(option)
-                                 })
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Item 3: Loading/Error/Empty state 
-            item(key = "status_indicator") {
-                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    Spacer(modifier = Modifier.height(10.dp))
                     when {
-                         isLoading -> CircularProgressIndicator() 
-                         fetchError != null -> Text(fetchError!!, color = MaterialTheme.colorScheme.error)
-                         posts.isEmpty() && !isLoading -> Text("No posts yet in this category.")
-                    }
-                 }
-            }
-
-            // Items 4...N: Display Posts list
-            items(displayedPosts, key = { it.id }) { post ->
-                var likeCount by remember { mutableStateOf(0) }
-                var commentCount by remember { mutableStateOf(0) }
-                
-                LaunchedEffect(post.id) {
-                    likeCount = likeManager.getLikeCount(post.id)
-                    try {
-                        // Get all comments and count them, just like we do with likes
-                        val comments = SupabaseClient.client.postgrest
-                            .from("comments")
-                            .select {
-                                filter { eq("post_id", post.id) }
+                        promptLoading -> Text("Loading prompt...", style = MaterialTheme.typography.bodyMedium)
+                        promptError != null -> Text(promptError!!, color = MaterialTheme.colorScheme.error)
+                        promptData == null -> Text("No active prompt for $category", style = MaterialTheme.typography.bodyMedium)
+                        else -> {
+                            Text(promptData!!.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            if (!promptData!!.description.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(promptData!!.description!!, style = MaterialTheme.typography.bodyMedium)
                             }
-                            .decodeList<Comment>()
-                        commentCount = comments.size
-                        Log.d("CategoryFeed", "Post ${post.id} comment count: $commentCount")
-                    } catch (e: Exception) {
-                        Log.e("CategoryFeed", "Failed to get comment count for post ${post.id}", e)
+                        }
                     }
                 }
-
-                Post(
-                    navController = navController,
-                    authorId = post.user.auth_id,
-                    postId = post.id,
-                    profileImage = post.user.profile_image ?: defaultProfileImages.random(),
-                    username = post.user.username,
-                    postImage = post.image_url,
-                    caption = post.content, 
-                    likeCount = likeCount, 
-                    commentCount = commentCount, 
-                    onCommentClicked = { navController.navigate("individual_post/${post.id}") },
-                    onImageClick = { 
-                        selectedPostImageUrl = post.image_url
-                        showPostImageDialog = true
-                    }
-                )
-                 Spacer(modifier = Modifier.height(8.dp))
             }
-
-            // Footer item 
-            item(key = "footer_spacer") {
-                Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            // Posts List
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (fetchError != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(fetchError!!, color = MaterialTheme.colorScheme.error)
+                }
+            } else if (displayedPosts.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No posts yet in this category.", style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    items(displayedPosts) { post ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            elevation = CardDefaults.cardElevation(6.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Post(
+                                navController = navController,
+                                authorId = post.user.auth_id,
+                                postId = post.id,
+                                profileImage = post.user.profile_image ?: defaultProfileImages.random(),
+                                username = post.user.username,
+                                postImage = post.image_url,
+                                caption = post.content,
+                                likeCount = 0, // Let Post composable fetch its own counts
+                                commentCount = 0, // Let Post composable fetch its own counts
+                                onCommentClicked = { navController.navigate("individual_post/${post.id}") },
+                                onImageClick = { showPostImageDialog = true; selectedPostImageUrl = post.image_url }
+                            )
+                        }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(100.dp)) // For FAB space
+                    }
+                }
             }
         }
-
-        // Bottom navigation buttons
-        Row(
+        // Floating Action Button for New Post
+        FloatingActionButton(
+            onClick = { navController.navigate("new_post/$category") },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.Center
+                .align(Alignment.BottomEnd)
+                .padding(28.dp)
         ) {
-            Button(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Text("All Communities")
-            }
-            Button(
-                onClick = {
-                    navController.navigate("new_post/${category}")
-                },
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Text("+")
-            }
+            Text("+")
         }
     }
 }
