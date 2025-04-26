@@ -2,6 +2,7 @@ package com.example.creativecommunity.pages
 
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.background
 
 @Composable
 fun MainPage(navController: NavController) {
@@ -45,18 +49,19 @@ fun MainPage(navController: NavController) {
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        // changed mapOf to listOf
+        // Add an image URL for each category
+        // adding photos to the background of the cards
         val categories = listOf(
-            Pair("ART", "Visual Arts"),
-            Pair("CODING", "Programming"),
-            Pair("ENGINEERING", "Engineering Projects"),
-            Pair("PHOTO", "Photography"),
-            Pair("WRITING", "Creative Writing"),
-            Pair("MUSIC", "Music Creation"),
-            Pair("CRAFTS", "Handmade Crafts"),
-            Pair("COOKING", "Culinary Arts"),
-            Pair("FILM", "Filmmaking"),
-            Pair("SCIENCE", "Science Experiments")
+            Triple("ART", "Visual Arts", "https://i.imgur.com/J3b8X5J.jpeg"),
+            Triple("CODING", "Programming", "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400&q=80"),
+            Triple("ENGINEERING", "Engineering Projects", "https://i.imgur.com/zpLrgNL.jpeg"),
+            Triple("PHOTO", "Photography", "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80"),
+            Triple("WRITING", "Creative Writing", "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80"),
+            Triple("MUSIC", "Music Creation", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80"),
+            Triple("CRAFTS", "Handmade Crafts", "https://i.imgur.com/RWeAiGV.jpeg"),
+            Triple("COOKING", "Culinary Arts", "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80"),
+            Triple("FILM", "Filmmaking", "https://i.imgur.com/T0baZzI.jpeg"),
+            Triple("SCIENCE", "Science Experiments", "https://i.imgur.com/GJ2d9PP.gif")
         )
 
         // Now using LazyVerticalGrid
@@ -66,32 +71,40 @@ fun MainPage(navController: NavController) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(categories) { (key, displayName) ->
+            items(categories) { (key, displayName, imageUrl) ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp)
+                        .height(140.dp)
                         .clickable { navController.navigate("category_feed/$key") },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ),
-                    // looks nicer if elevate card off of background
                     elevation = CardDefaults.cardElevation(5.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = displayName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                    // Box for images
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = displayName,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)) // For behind text light background over images
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = displayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
