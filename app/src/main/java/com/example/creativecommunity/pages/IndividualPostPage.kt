@@ -60,6 +60,7 @@ data class PostComment(
     val users: UserInfo // Who made the comment
 )
 
+// Data for comments - need to serialize data --> supabase
 @Serializable
 data class NewComment(
     val user_id: Int,
@@ -73,6 +74,8 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
     var comments by remember { mutableStateOf<List<PostComment>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    // Posts
     val coroutineScope = rememberCoroutineScope()
     var commentInput by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
