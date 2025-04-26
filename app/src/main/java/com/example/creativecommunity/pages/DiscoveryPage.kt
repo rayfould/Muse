@@ -27,6 +27,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.ContentScale
 
 // Data class to hold post with its like count for sorting
 data class PostWithLikes(
@@ -36,16 +38,74 @@ data class PostWithLikes(
 
 @Composable
 fun DiscoveryPage(navController: NavController) {
+    // State variables
     var showSortDropdown by remember { mutableStateOf(false) }
     var selectedSortOption by remember { mutableStateOf("Recent") }
     var isLoading by remember { mutableStateOf(false) }
     var posts by remember { mutableStateOf<List<DiscoveryPost>>(emptyList()) }
     var displayedPosts by remember { mutableStateOf<List<DiscoveryPost>>(emptyList()) }
     var fetchError by remember { mutableStateOf<String?>(null) }
+    var showPostImageDialog by remember { mutableStateOf(false) }
+    var selectedPostImageUrl by remember { mutableStateOf<String?>(null) }
+    
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val likeManager = remember { LikeManager.getInstance(context) }
+
+    // Default profile images list
+    val defaultProfileImages = listOf(
+        "https://i.imgur.com/DyFZblf.jpeg", // Gray square
+        "https://i.imgur.com/kcbZfpx.png", // Smiley face
+        "https://i.imgur.com/WvDsY4x.jpeg", // Simple avatar silhouette
+        "https://i.imgur.com/iCy2JU1.jpeg", // Minimalist user icon
+        "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
+    )
+
+    // Post image dialog
+    if (showPostImageDialog && selectedPostImageUrl != null) {
+        Dialog(onDismissRequest = { showPostImageDialog = false }) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = selectedPostImageUrl,
+                    contentDescription = "Enlarged post image",
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .clickable { showPostImageDialog = false },
+                    contentScale = ContentScale.FillWidth
+                )
+            }
+        }
+    }
+
+    // Fetch posts on initial load
+    LaunchedEffect(Unit) {
+        isLoading = true
+        fetchError = null
+        try {
+            val fetchedPosts = withContext(Dispatchers.IO) {
+                val result = SupabaseClient.client.postgrest.from("posts")
+                    .select(Columns.raw("id, image_url, content, category, created_at, user_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
+                        order("created_at", Order.DESCENDING)
+                        limit(50)
+                    }
+                val postsList = result.decodeList<DiscoveryPost>()
+                Log.d("DiscoveryPage", "Fetched ${postsList.size} posts")
+                postsList
+            }
+            posts = fetchedPosts
+            displayedPosts = fetchedPosts
+            selectedSortOption = "Recent"
+        } catch (e: Exception) {
+            fetchError = "Failed to load posts: ${e.message}"
+            Log.e("DiscoveryPage", "Failed to load posts", e)
+        } finally {
+            isLoading = false
+        }
+    }
 
     // Sorting logic moved inside Composable
     val sortPosts: (String) -> Unit = { sortOption ->
@@ -77,155 +137,77 @@ fun DiscoveryPage(navController: NavController) {
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(15.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 80.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 30.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Back Button
+            TextButton(
+                onClick = { navController.navigateUp() },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text(text = "Discover", style = MaterialTheme.typography.headlineMedium)
-                
-                Box {
-                    Button(
-                        onClick = { showSortDropdown = true },
-                        enabled = !isLoading
-                    ) {
-                        Text("Sort by: $selectedSortOption")
-                    }
-                    
-                    DropdownMenu(
-                        expanded = showSortDropdown,
-                        onDismissRequest = { showSortDropdown = false }
-                    ) {
-                        listOf("Recent", "Most Liked", "Recommended", "Random").forEach { option ->
-                             DropdownMenuItem(text = {Text(option)}, onClick = { 
-                                selectedSortOption = option
-                                showSortDropdown = false
-                                sortPosts(option)
-                             })
-                        }
-                    }
+                Text("← Back")
+            }
+            // Posts List
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-
-            var showPfpDialog by remember { mutableStateOf(false) }
-            var selectedPfpUrl by remember { mutableStateOf<String?>(null) }
-
-            if (showPfpDialog && selectedPfpUrl != null) {
-                Dialog(onDismissRequest = { showPfpDialog = false }) {
-                    Column(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        AsyncImage(
-                            model = selectedPfpUrl,
-                            contentDescription = "Enlarged profile picture",
-                            modifier = Modifier
-                                .size(500.dp)
-                                .clickable { showPfpDialog = false }
-                        )
-                    }
+            } else if (fetchError != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(fetchError!!, color = MaterialTheme.colorScheme.error)
                 }
-            }
-
-            LaunchedEffect(Unit) {
-                isLoading = true
-                fetchError = null
-                try {
-                    val fetchedPosts = withContext(Dispatchers.IO) {
-                        val result = SupabaseClient.client.postgrest.from("posts")
-                            .select(Columns.raw("id, image_url, content, category, created_at, user_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
-                                order("created_at", Order.DESCENDING)
-                                limit(50) // Increased limit, consider pagination later
-                            }
-                        val postsList = result.decodeList<DiscoveryPost>()
-                        Log.d("DiscoveryPage", "Fetched ${postsList.size} posts")
-                        postsList
-                    }
-                    posts = fetchedPosts
-                    displayedPosts = fetchedPosts
-                    selectedSortOption = "Recent"
-                } catch (e: Exception) {
-                    fetchError = "Failed to load posts: ${e.message}"
-                    Log.e("DiscoveryPage", "Failed to load posts", e)
-                } finally {
-                    isLoading = false
+            } else if (displayedPosts.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No posts to discover yet.", style = MaterialTheme.typography.bodyMedium)
                 }
-            }
-
-            val defaultProfileImages = listOf(
-                "https://i.imgur.com/DyFZblf.jpeg", // Gray square
-                "https://i.imgur.com/kcbZfpx.png", // Smiley face
-                "https://i.imgur.com/WvDsY4x.jpeg", // Simple avatar silhouette
-                "https://i.imgur.com/iCy2JU1.jpeg", // Minimalist user icon
-                "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
-            )
-
-            AnimatedVisibility(
-                visible = isLoading,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .size(48.dp)
-                )
-            }
-
-            if (fetchError != null) {
-                Text(text = fetchError!!)
-            } else if (posts.isEmpty()) {
-                Text(text = "No posts yet.")
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.animateContentSize()
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    items(
-                        items = displayedPosts,
-                        key = { it.id }
-                    ) { post ->
-                        val defaultPfp = remember { post.user.profile_image ?: defaultProfileImages.random() }
-                        AnimatedVisibility(
-                            visible = !isLoading,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
+                    items(displayedPosts) { post ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            elevation = CardDefaults.cardElevation(6.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
                             Post(
                                 navController = navController,
                                 authorId = post.user.auth_id,
                                 postId = post.id,
-                                profileImage = defaultPfp,
-                                username = post.user.username ?: "Unknown User",
+                                profileImage = post.user.profile_image ?: defaultProfileImages.random(),
+                                username = post.user.username,
                                 postImage = post.image_url,
-                                caption = "${post.content}\n\nCategory: ${post.category}",
+                                caption = post.content,
                                 likeCount = 0,
                                 commentCount = 0,
                                 onCommentClicked = { navController.navigate("individual_post/${post.id}") },
-                                onImageClick = { navController.navigate("individual_post/${post.id}") }
+                                onImageClick = { 
+                                    selectedPostImageUrl = post.image_url
+                                    showPostImageDialog = true
+                                }
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
             }
+        }
+        // Floating Action Button for New Post
+        FloatingActionButton(
+            onClick = { navController.navigate("new_post/discovery") },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(28.dp)
+        ) {
+            Text("+")
         }
     }
 }
