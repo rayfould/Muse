@@ -67,6 +67,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun ProfilePage(navController: NavController) {
@@ -115,6 +117,9 @@ fun ProfilePage(navController: NavController) {
 
     // Add a new state variable for badges
     var badges by remember { mutableStateOf(listOf("Badge 1", "Badge 2", "Badge 3")) }
+
+    // Add a scroll state
+    val scrollState = rememberScrollState()
 
     suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
         val contentResolver = context.contentResolver
@@ -338,7 +343,8 @@ fun ProfilePage(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when {
@@ -658,7 +664,8 @@ fun ProfilePage(navController: NavController) {
                 // Settings Buttons
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Button(
                         onClick = { showEmailDialog = true },
@@ -732,11 +739,27 @@ fun ProfilePage(navController: NavController) {
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Logout Button
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                SupabaseClient.client.auth.signOut()
+                                navController.navigate("login") { // Navigate to login after sign out
+                                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Logout")
+                    }
                 }
 
                 // Save Changes Button (only shown when there are changes)
                 if (hasChanges) {
-                    Spacer(modifier = Modifier.weight(1f))
                     Button(
                         onClick = { saveChanges() },
                         modifier = Modifier
@@ -754,6 +777,8 @@ fun ProfilePage(navController: NavController) {
                         }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
