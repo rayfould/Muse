@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun MainPage(navController: NavController) {
@@ -49,19 +50,28 @@ fun MainPage(navController: NavController) {
             .padding(horizontalPadding),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Welcome to Muse!",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = titleFontSize
-        )
-        Text(
-            text = "Dive into your creative community",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 24.dp),
-            fontSize = subtitleFontSize
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 32.dp, bottom = 8.dp)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), RoundedCornerShape(16.dp))
+                .padding(vertical = 16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Welcome to Muse!",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = titleFontSize
+                )
+                Text(
+                    text = "Dive into your creative community",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = subtitleFontSize
+                )
+            }
+        }
 
         // Add an image URL for each category
         // adding photos to the background of the cards
@@ -80,7 +90,7 @@ fun MainPage(navController: NavController) {
 
         // Now using LazyVerticalGrid with responsive columns
         LazyVerticalGrid(
-            columns = if (isWideScreen) GridCells.Fixed(3) else GridCells.Fixed(2),
+            columns = if (isWideScreen) GridCells.Fixed(4) else GridCells.Fixed(2),
             verticalArrangement = Arrangement.spacedBy(gridSpacing),
             horizontalArrangement = Arrangement.spacedBy(gridSpacing),
             modifier = Modifier.fillMaxSize()
