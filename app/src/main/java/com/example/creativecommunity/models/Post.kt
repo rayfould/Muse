@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Serializable
 data class UserInfo(
@@ -331,100 +332,109 @@ fun Post(
         }
     }
 
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 0.dp)
-            .background(Color.White)
+            .padding(vertical = 8.dp, horizontal = 0.dp),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        // Profile image and username
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-                .clickable { navigateToProfile() }
+                .background(Color.Transparent)
         ) {
-            AsyncImage(
-                model = profileImage,
-                contentDescription = "Profile photo",
+            // Profile image and username
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .height(40.dp)
-                    .width(40.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = username,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        // Post Image with shadow
-        AsyncImage(
-            model = postImage,
-            contentDescription = "Post image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-                .shadow(4.dp, shape = CardDefaults.elevatedShape)
-                .clickable { onImageClick() },
-            contentScale = ContentScale.Crop
-        )
-
-        // Caption
-        if (caption.isNotBlank()) {
-            Text(
-                text = caption,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Divider(modifier = Modifier.padding(horizontal = 8.dp))
-
-        // Like, Comment, Save Buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { toggleLike() }) {
-                    if (isLiked) {
-                        Icon(Icons.Filled.Favorite, contentDescription = "Liked", tint = Color.Red)
-                    } else {
-                        Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Like", tint = Color.Gray)
-                    }
-                }
-                Text(
-                    text = "$currentLikeCount",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .clickable { navigateToProfile() }
+            ) {
+                AsyncImage(
+                    model = profileImage,
+                    contentDescription = "Profile photo",
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(40.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(onClick = { onCommentClicked() }) {
-                    Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Comments", tint = Color.Gray)
-                }
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "$commentCount",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = username,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            IconButton(onClick = { toggleSave() }) {
-                if (isSaved) {
-                    Icon(Icons.Filled.Bookmark, contentDescription = "Saved", tint = MaterialTheme.colorScheme.primary)
-                } else {
-                    Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Save", tint = Color.Gray)
+
+            // Post Image with shadow
+            AsyncImage(
+                model = postImage,
+                contentDescription = "Post image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .shadow(4.dp, shape = RoundedCornerShape(14.dp))
+                    .clickable { onImageClick() },
+                contentScale = ContentScale.Crop
+            )
+
+            // Caption
+            if (caption.isNotBlank()) {
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Divider(modifier = Modifier.padding(horizontal = 8.dp))
+
+            // Like, Comment, Save Buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { toggleLike() }) {
+                        if (isLiked) {
+                            Icon(Icons.Filled.Favorite, contentDescription = "Liked", tint = Color.Red)
+                        } else {
+                            Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Like", tint = Color.Gray)
+                        }
+                    }
+                    Text(
+                        text = "$currentLikeCount",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { onCommentClicked() }) {
+                        Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Comments", tint = Color.Gray)
+                    }
+                    Text(
+                        text = "$commentCount",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(onClick = { toggleSave() }) {
+                    if (isSaved) {
+                        Icon(Icons.Filled.Bookmark, contentDescription = "Saved", tint = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Save", tint = Color.Gray)
+                    }
                 }
             }
         }

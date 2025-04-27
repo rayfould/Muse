@@ -42,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.animation.core.tween
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -53,11 +54,16 @@ fun LoginPage(navController: NavController) {
     var isLoading by remember { mutableStateOf(false) }
     var showTitle by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
+    var showTitleWithForm by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        delay(2000) // Initial delay before showing title
         showTitle = true
-        kotlinx.coroutines.delay(2000)
+        delay(2000) // Show initial title for 2 seconds
+        showTitle = false
+        delay(1000) // Brief pause before showing form
         showForm = true
+        showTitleWithForm = true
     }
 
     val configuration = LocalConfiguration.current
@@ -82,8 +88,8 @@ fun LoginPage(navController: NavController) {
     ) {
         AnimatedVisibility(
             visible = showTitle && !showForm,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 1000))
         ) {
             Text(
                 text = "Muse",
@@ -95,8 +101,8 @@ fun LoginPage(navController: NavController) {
         }
         AnimatedVisibility(
             visible = showForm,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 1000))
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -106,13 +112,19 @@ fun LoginPage(navController: NavController) {
                     .background(Color.Black.copy(alpha = 0.6f))
                     .padding(verticalPadding)
             ) {
-                Text(
-                    text = "Muse",
-                    fontSize = titleFontSize,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(bottom = 32.dp)
-                )
+                AnimatedVisibility(
+                    visible = showTitleWithForm,
+                    enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = 1000))
+                ) {
+                    Text(
+                        text = "Muse",
+                        fontSize = titleFontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 32.dp)
+                    )
+                }
                 TextField(
                     value = email,
                     onValueChange = { email = it },

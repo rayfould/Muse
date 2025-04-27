@@ -315,7 +315,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp, horizontal = 4.dp)
+                                .padding(vertical = 10.dp, horizontal = 4.dp)
                         ) {
                             Post(
                                 navController = navController,
