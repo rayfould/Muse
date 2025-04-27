@@ -61,7 +61,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.w3c.dom.Comment
+import com.example.creativecommunity.models.CommentIdOnly
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -124,6 +124,8 @@ fun CategoryFeed(navController: NavController, category: String) {
         "https://i.imgur.com/7hVHf5f.png"  // Abstract shape
     )
 
+    var commentCounts by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+
     // Fetch prompt data
     LaunchedEffect(category) {
         try {
@@ -152,9 +154,20 @@ fun CategoryFeed(navController: NavController, category: String) {
                 Log.d("CategoryFeed", "Fetched ${postsList.size} posts for category: $category")
                 postsList
             }
+            // Fetch comment counts for each post
+            val postsWithCommentCounts = fetchedPosts.map { post ->
+                val commentCount = withContext(Dispatchers.IO) {
+                    SupabaseClient.client.postgrest["comments"]
+                        .select(Columns.raw("id")) { filter { eq("post_id", post.id) } }
+                        .decodeList<CommentIdOnly>().size
+                }
+                post to commentCount
+            }
             posts = fetchedPosts
             displayedPosts = fetchedPosts 
             selectedSortOption = "Recent"
+            // Store comment counts in a map for display
+            commentCounts = postsWithCommentCounts.associate { it.first.id to it.second }
         } catch (e: Exception) {
             fetchError = "Failed to load posts: ${e.message}"
             Log.e("CategoryFeed", "Failed to load posts", e)
@@ -316,7 +329,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                                 postImage = post.image_url,
                                 caption = post.content,
                                 likeCount = 0, // Let Post composable fetch its own counts
-                                commentCount = 0, // Let Post composable fetch its own counts
+                                commentCount = commentCounts[post.id] ?: 0, // Use fetched comment count
                                 onCommentClicked = { navController.navigate("individual_post/${post.id}") },
                                 onImageClick = { showPostImageDialog = true; selectedPostImageUrl = post.image_url }
                             )

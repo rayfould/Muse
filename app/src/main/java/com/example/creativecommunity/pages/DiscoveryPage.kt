@@ -29,6 +29,9 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
+import com.example.creativecommunity.pages.CommentData
+import kotlinx.serialization.Serializable
+import com.example.creativecommunity.models.CommentIdOnly
 
 // Data class to hold post with its like count for sorting
 data class PostWithLikes(
@@ -47,6 +50,7 @@ fun DiscoveryPage(navController: NavController) {
     var fetchError by remember { mutableStateOf<String?>(null) }
     var showPostImageDialog by remember { mutableStateOf(false) }
     var selectedPostImageUrl by remember { mutableStateOf<String?>(null) }
+    var commentCounts by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -96,9 +100,20 @@ fun DiscoveryPage(navController: NavController) {
                 Log.d("DiscoveryPage", "Fetched ${postsList.size} posts")
                 postsList
             }
+            // Fetch comment counts for each post
+            val postsWithCommentCounts = fetchedPosts.map { post ->
+                val commentCount = withContext(Dispatchers.IO) {
+                    SupabaseClient.client.postgrest["comments"]
+                        .select(Columns.raw("id")) { filter { eq("post_id", post.id) } }
+                        .decodeList<CommentIdOnly>().size
+                }
+                post to commentCount
+            }
             posts = fetchedPosts
             displayedPosts = fetchedPosts
             selectedSortOption = "Recent"
+            // Store comment counts in a map for display
+            commentCounts = postsWithCommentCounts.associate { it.first.id to it.second }
         } catch (e: Exception) {
             fetchError = "Failed to load posts: ${e.message}"
             Log.e("DiscoveryPage", "Failed to load posts", e)
@@ -183,7 +198,7 @@ fun DiscoveryPage(navController: NavController) {
                                 postImage = post.image_url,
                                 caption = post.content,
                                 likeCount = 0,
-                                commentCount = 0,
+                                commentCount = commentCounts[post.id] ?: 0,
                                 onCommentClicked = { navController.navigate("individual_post/${post.id}") },
                                 onImageClick = { 
                                     selectedPostImageUrl = post.image_url

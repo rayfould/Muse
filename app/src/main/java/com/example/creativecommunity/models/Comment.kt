@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TextButton
-
+import kotlinx.serialization.Serializable
 
 @Composable
 fun Comment(
@@ -53,3 +53,6 @@ fun Comment(
         }
     }
 }
+
+@Serializable
+data class CommentIdOnly(val id: Int)
