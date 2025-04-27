@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +41,7 @@ fun LoginPage(navController: NavController) {
     var isSignup by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
 
     val configuration = LocalConfiguration.current
     val landscape = configuration.screenWidthDp > 600
@@ -86,6 +88,7 @@ fun LoginPage(navController: NavController) {
         // Login \ Sign Up Button
         Button(
             onClick = {
+                isLoading = true
                 scope.launch {
                     try {
                         if (isSignup) {
@@ -93,17 +96,15 @@ fun LoginPage(navController: NavController) {
                                 this.email = email
                                 this.password = password
                                 this.data = kotlinx.serialization.json.buildJsonObject {
-                                    //Create json object, before passing it, defaulting to a basic username from email
                                     put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
                                 }
                             }
-                            // Automatically log in after successful signup
                             SupabaseClient.client.auth.signInWith(Email) {
                                 this.email = email
                                 this.password = password
                             }
                             navController.navigate("main") {
-                                popUpTo("login") { inclusive = true } // Clear login from back stack
+                                popUpTo("login") { inclusive = true }
                             }
                         } else {
                             SupabaseClient.client.auth.signInWith(Email) {
@@ -111,17 +112,24 @@ fun LoginPage(navController: NavController) {
                                 this.password = password
                             }
                             navController.navigate("main") {
-                                popUpTo("login") { inclusive = true } // Clear login from back stack
+                                popUpTo("login") { inclusive = true }
                             }
                         }
                     } catch (e: Exception) {
                         message = "${if (isSignup) "Signup" else "Login"} failed: ${e.message}"
+                    } finally {
+                        isLoading = false
                     }
                 }
             },
+            enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(if (isSignup) "Sign Up" else "Login")
+        }
+        if (isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
         }
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(onClick = { isSignup = !isSignup }) {
