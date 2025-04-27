@@ -54,7 +54,7 @@ data class UserEntity(
 
 @Serializable
 data class LikeEntity(
-    val id: Int,
+    val id: String? = null,
     val user_id: Int,
     val post_id: Int
 )

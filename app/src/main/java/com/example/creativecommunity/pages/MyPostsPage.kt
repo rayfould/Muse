@@ -61,7 +61,7 @@ data class LikeData(
 
 @Serializable
 data class CommentData(
-    val id: String? = null,
+    val id: Int,
     val user_id: Int? = null,
     val post_id: Int? = null,
     val content: String? = null,
@@ -139,7 +139,7 @@ fun MyPostsPage(
                 Log.d("MyPosts", "Found ${posts.size} posts by user $targetUserId")
                 
                 val userResponse = client.postgrest["users"]
-                    .select(columns = Columns.list("id", "username", "profile_image", "bio", "auth_id")) {
+                    .select(columns = Columns.list("id", "username", "profile_image", "bio", "auth_id", "email")) {
                         filter { eq("id", targetUserId) }
                     }
                 
