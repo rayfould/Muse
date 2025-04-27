@@ -38,8 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +67,9 @@ import com.example.creativecommunity.models.CommentIdOnly
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.painterResource
+import com.example.creativecommunity.R
+import androidx.compose.foundation.Image
 
 @Serializable
 data class Prompt(
@@ -114,6 +119,9 @@ fun CategoryFeed(navController: NavController, category: String) {
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val likeManager = remember { LikeManager.getInstance(context) }
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isPhoneMode = screenWidth < 600
 
     // Default profile images for users without one
     val defaultProfileImages = listOf(
@@ -245,6 +253,16 @@ fun CategoryFeed(navController: NavController, category: String) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        if (isPhoneMode) {
+            Image(
+                painter = painterResource(id = R.drawable.splash_bg),
+                contentDescription = "Background Eye",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.18f },
+                contentScale = ContentScale.Crop
+            )
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             // Back Button
             TextButton(

@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -33,6 +35,9 @@ import androidx.compose.ui.layout.ContentScale
 import com.example.creativecommunity.pages.CommentData
 import kotlinx.serialization.Serializable
 import com.example.creativecommunity.models.CommentIdOnly
+import androidx.compose.ui.res.painterResource
+import com.example.creativecommunity.R
+import androidx.compose.foundation.Image
 
 // Data class to hold post with its like count for sorting
 data class PostWithLikes(
@@ -57,6 +62,9 @@ fun DiscoveryPage(navController: NavController) {
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val likeManager = remember { LikeManager.getInstance(context) }
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isPhoneMode = screenWidth < 600
 
     // Default profile images list
     val defaultProfileImages = listOf(
@@ -154,6 +162,16 @@ fun DiscoveryPage(navController: NavController) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        if (isPhoneMode) {
+            Image(
+                painter = painterResource(id = R.drawable.splash_bg),
+                contentDescription = "Background Eye",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.18f },
+                contentScale = ContentScale.Crop
+            )
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             // Header with opacity background
             Box(
