@@ -5,7 +5,9 @@ import android.util.Base64
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -60,6 +64,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.ui.draw.clip
@@ -67,6 +72,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 
 @Composable
 fun NewPostPage(navController: NavController, category: String) {
@@ -123,6 +131,11 @@ fun NewPostPage(navController: NavController, category: String) {
     val cardShape: Shape = RoundedCornerShape(20.dp)
     val imageShape: Shape = RoundedCornerShape(16.dp)
 
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isWideScreen = screenWidth > 600
+    val maxFormWidth = if (isWideScreen) 500.dp else screenWidth.dp
+
     suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
         val contentResolver = context.contentResolver
         val bytes = contentResolver.openInputStream(imageUri)?.use { stream ->
@@ -158,164 +171,205 @@ fun NewPostPage(navController: NavController, category: String) {
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier)
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            item {
-                Text("Create a New Post", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 8.dp))
-                Text("Category: $category", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().shadow(4.dp, cardShape),
-                    shape = cardShape,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Step 1: Add a Photo", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        TextButton(
+                            onClick = { navController.navigateUp() },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            ElevatedButton(
-                                onClick = { cameraLauncher.launch(tempFileUri) },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = "Take Photo", modifier = Modifier.padding(end = 4.dp))
-                                Text("Take Photo")
-                            }
-                            ElevatedButton(
-                                onClick = { imagePickerLauncher.launch("image/*") },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Filled.PhotoLibrary, contentDescription = "Upload Photo", modifier = Modifier.padding(end = 4.dp))
-                                Text("Upload Photo")
-                            }
+                            Text("← Back")
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        currImage?.let {
-                            AsyncImage(
-                                model = it,
-                                contentDescription = "Selected image",
-                                modifier = Modifier
-                                    .height(220.dp)
-                                    .fillMaxWidth()
-                                    .clip(imageShape)
-                                    .shadow(8.dp, imageShape)
-                            )
-                        } ?: Text("No image selected", color = Color.Gray, modifier = Modifier.padding(8.dp))
                     }
-                }
-            }
-            item { Spacer(modifier = Modifier.height(20.dp)) }
-            item { Divider(modifier = Modifier.padding(vertical = 8.dp)) }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().shadow(4.dp, cardShape),
-                    shape = cardShape,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Step 2: Write a Caption", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextField(
-                            value = postCaption,
-                            onValueChange = {
-                                if (it.length <= maxCaptionLength) postCaption = it
-                            },
-                            label = { Text("Caption (max $maxCaptionLength chars)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = false,
-                            maxLines = 5,
-                            shape = RoundedCornerShape(12.dp)
+                        Text(
+                            "Create a New Post",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 2.dp)
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Category: $category",
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                    }
+                }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .widthIn(max = maxFormWidth)
+                            .fillMaxWidth()
+                            .shadow(4.dp, cardShape),
+                        shape = cardShape,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("${postCaption.length}/$maxCaptionLength", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text("Step 1: Add a Photo", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                ElevatedButton(
+                                    onClick = { cameraLauncher.launch(tempFileUri) },
+                                    modifier = Modifier.weight(1f).widthIn(max = maxFormWidth),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Filled.CameraAlt, contentDescription = "Take Photo", modifier = Modifier.padding(end = 4.dp))
+                                    Text("Take Photo")
+                                }
+                                ElevatedButton(
+                                    onClick = { imagePickerLauncher.launch("image/*") },
+                                    modifier = Modifier.weight(1f).widthIn(max = maxFormWidth),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Filled.PhotoLibrary, contentDescription = "Upload Photo", modifier = Modifier.padding(end = 4.dp))
+                                    Text("Upload Photo")
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            currImage?.let {
+                                AsyncImage(
+                                    model = it,
+                                    contentDescription = "Selected image",
+                                    modifier = Modifier
+                                        .height(220.dp)
+                                        .fillMaxWidth()
+                                        .clip(imageShape)
+                                        .shadow(8.dp, imageShape)
+                                )
+                            } ?: Text("No image selected", color = Color.Gray, modifier = Modifier.padding(8.dp))
                         }
                     }
                 }
-            }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-            item {
-                ElevatedButton(
-                    onClick = {
-                        if (currImage == null) {
-                            coroutineScope.launch { snackbarHostState.showSnackbar("Please select an image.") }
-                            return@ElevatedButton
+                item { Spacer(modifier = Modifier.height(20.dp)) }
+                item { Divider(modifier = Modifier.padding(vertical = 8.dp).widthIn(max = maxFormWidth)) }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .widthIn(max = maxFormWidth)
+                            .fillMaxWidth()
+                            .shadow(4.dp, cardShape),
+                        shape = cardShape,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Step 2: Write a Caption", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextField(
+                                value = postCaption,
+                                onValueChange = {
+                                    if (it.length <= maxCaptionLength) postCaption = it
+                                },
+                                label = { Text("Caption (max $maxCaptionLength chars)") },
+                                modifier = Modifier.fillMaxWidth().widthIn(max = maxFormWidth),
+                                singleLine = false,
+                                maxLines = 5,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Text("${postCaption.length}/$maxCaptionLength", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            }
                         }
-                        if (postCaption.isBlank()) {
-                            coroutineScope.launch { snackbarHostState.showSnackbar("Please enter a caption.") }
-                            return@ElevatedButton
-                        }
-                        if (!currentlyUploading) {
-                            shouldUpload = true
-                            currentlyUploading = true
-                            imgurImageURL = null
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !currentlyUploading,
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    if (currentlyUploading) {
-                        CircularProgressIndicator(modifier = Modifier.height(24.dp).width(24.dp), strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Posting...")
-                    } else {
-                        Text("Post to Community")
                     }
                 }
-            }
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-            item {
-                OutlinedButton(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-                    Text("Back to $category Feed")
-                }
-            }
-            // Feedback dialogs
-            item {
-                if (showSuccessDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showSuccessDialog = false; navController.popBackStack() },
-                        title = { Text("Success!") },
-                        text = { Text("Your post was submitted successfully.") },
-                        confirmButton = {
-                            ElevatedButton(onClick = { showSuccessDialog = false; navController.popBackStack() }) {
-                                Text("OK")
+                item { Spacer(modifier = Modifier.height(20.dp)) }
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ElevatedButton(
+                            onClick = {
+                                if (currImage == null) {
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Please select an image.") }
+                                    return@ElevatedButton
+                                }
+                                if (postCaption.isBlank()) {
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Please enter a caption.") }
+                                    return@ElevatedButton
+                                }
+                                if (!currentlyUploading) {
+                                    shouldUpload = true
+                                    currentlyUploading = true
+                                    imgurImageURL = null
+                                }
+                            },
+                            modifier = Modifier.widthIn(max = maxFormWidth).height(52.dp),
+                            enabled = currImage != null && !currentlyUploading,
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            if (currentlyUploading) {
+                                CircularProgressIndicator(modifier = Modifier.height(24.dp).width(24.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Posting...")
+                            } else {
+                                Text("Post to Community")
                             }
                         }
-                    )
+                    }
                 }
-            }
-            item {
-                if (showErrorDialog != null) {
-                    AlertDialog(
-                        onDismissRequest = { showErrorDialog = null },
-                        title = { Text("Error") },
-                        text = { Text(showErrorDialog ?: "") },
-                        confirmButton = {
-                            ElevatedButton(onClick = { showErrorDialog = null }) {
-                                Text("OK")
+                // Feedback dialogs
+                item {
+                    if (showSuccessDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showSuccessDialog = false; navController.popBackStack() },
+                            title = { Text("Success!") },
+                            text = { Text("Your post was submitted successfully.") },
+                            confirmButton = {
+                                ElevatedButton(onClick = { showSuccessDialog = false; navController.popBackStack() }) {
+                                    Text("OK")
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
+                }
+                item {
+                    if (showErrorDialog != null) {
+                        AlertDialog(
+                            onDismissRequest = { showErrorDialog = null },
+                            title = { Text("Error") },
+                            text = { Text(showErrorDialog ?: "") },
+                            confirmButton = {
+                                ElevatedButton(onClick = { showErrorDialog = null }) {
+                                    Text("OK")
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
