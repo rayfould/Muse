@@ -12,6 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -26,8 +32,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -39,6 +48,14 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import androidx.navigation.NavController
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.ui.graphics.Color
 
 @Serializable
 data class UserInfo(
@@ -308,9 +325,6 @@ fun Post(
     val navigateToProfile = {
         // Prevent navigation if authorId is missing (should not happen ideally)
         if (authorId.isNotEmpty()) {
-            // Avoid navigating to own profile page from here, use main profile button instead?
-            // Or allow it, maybe show ViewProfilePage even for self?
-            // For now, let's allow navigating to self via this method.
             navController.navigate("user/$authorId")
         } else {
             Log.w("PostComposable", "Attempted to navigate to profile but authorId is empty.")
@@ -320,13 +334,15 @@ fun Post(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp)
+            .padding(vertical = 8.dp, horizontal = 0.dp)
+            .background(Color.White)
     ) {
-        // Profile image and username - Make Row clickable
+        // Profile image and username
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(horizontal = 10.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp)
                 .clickable { navigateToProfile() }
         ) {
             AsyncImage(
@@ -338,68 +354,79 @@ fun Post(
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(text = username)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = username,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Post Image
+        // Post Image with shadow
         AsyncImage(
             model = postImage,
             contentDescription = "Post image",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(225.dp)
-                .clickable { onImageClick() }
+                .height(240.dp)
+                .shadow(4.dp, shape = CardDefaults.elevatedShape)
+                .clickable { onImageClick() },
+            contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.height(10.dp))
 
         // Caption
-        Text(text = caption, modifier = Modifier.padding(horizontal = 10.dp))
-        Spacer(modifier = Modifier.height(10.dp))
+        if (caption.isNotBlank()) {
+            Text(
+                text = caption,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Divider(modifier = Modifier.padding(horizontal = 8.dp))
 
         // Like, Comment, Save Buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = { toggleLike() }) {
-                if (isLiked) {
-                    Text("♥️ $currentLikeCount")
-                } else {
-                    Text("🤍 $currentLikeCount")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { toggleLike() }) {
+                    if (isLiked) {
+                        Icon(Icons.Filled.Favorite, contentDescription = "Liked", tint = Color.Red)
+                    } else {
+                        Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Like", tint = Color.Gray)
+                    }
                 }
+                Text(
+                    text = "$currentLikeCount",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = { onCommentClicked() }) {
+                    Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Comments", tint = Color.Gray)
+                }
+                Text(
+                    text = "$commentCount",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
-
-            // Comment button
-            Button(onClick = { onCommentClicked() }) {
-                Text("💬 $commentCount")
-            }
-            
-            // Save button
-            Button(onClick = { toggleSave() }) {
+            IconButton(onClick = { toggleSave() }) {
                 if (isSaved) {
-                    // Use filled star for saved
-                    Text("\uD83C\uDF1F")
+                    Icon(Icons.Filled.Bookmark, contentDescription = "Saved", tint = MaterialTheme.colorScheme.primary)
                 } else {
-                    // Use outlined star for not saved
-                    Text("⭐")
+                    Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Save", tint = Color.Gray)
                 }
             }
         }
-
-        // Add debug output to show save state
-        /*
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Debug: Saved = $isSaved",
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 10.sp,
-            modifier = Modifier.padding(start = 10.dp)
-        )
-        */
     }
 }

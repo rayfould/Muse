@@ -312,13 +312,10 @@ fun CategoryFeed(navController: NavController, category: String) {
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
                     items(displayedPosts) { post ->
-                        Card(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            elevation = CardDefaults.cardElevation(6.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                .padding(vertical = 8.dp, horizontal = 4.dp)
                         ) {
                             Post(
                                 navController = navController,
