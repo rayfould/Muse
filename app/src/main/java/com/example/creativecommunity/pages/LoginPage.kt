@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -28,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -41,13 +41,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.Layout
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -67,16 +61,22 @@ fun LoginPage(navController: NavController) {
     }
 
     val configuration = LocalConfiguration.current
-    val landscape = configuration.screenWidthDp > 600
-    val columnModifier = if (landscape) {
-        Modifier.padding(20.dp) // no fillMaxSize in landscape
-    } else {
-        Modifier
-            .fillMaxSize()
-            .padding(20.dp)
-    }
+    val screenWidth = configuration.screenWidthDp
+    // for screen sizes - different values for different screens; don't want super stretched UI
+    val isLandscape = screenWidth > 600
+    
+    // DIFFERENT VALUES FOR DIFFERENT SCREN SIZES
+    val maxFormWidth = if (isLandscape) 500.dp else screenWidth.dp
+    val horizontalPadding = if (isLandscape) 32.dp else 20.dp
+    val verticalPadding = if (isLandscape) 24.dp else 16.dp
+    val titleFontSize = if (isLandscape) 48.sp else 40.sp
+    val buttonFontSize = if (isLandscape) 18.sp else 16.sp
+    val textFieldFontSize = if (isLandscape) 18.sp else 16.sp
+
     Column(
-        modifier = columnModifier,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -87,7 +87,7 @@ fun LoginPage(navController: NavController) {
         ) {
             Text(
                 text = "Muse",
-                fontSize = 40.sp,
+                fontSize = titleFontSize,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 32.dp)
@@ -102,12 +102,13 @@ fun LoginPage(navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier
+                    .widthIn(max = maxFormWidth)
                     .background(Color.Black.copy(alpha = 0.6f))
-                    .padding(24.dp)
+                    .padding(verticalPadding)
             ) {
                 Text(
                     text = "Muse",
-                    fontSize = 40.sp,
+                    fontSize = titleFontSize,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     modifier = Modifier.padding(bottom = 32.dp)
@@ -115,18 +116,24 @@ fun LoginPage(navController: NavController) {
                 TextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    label = { Text("Email", fontSize = textFieldFontSize) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = textFieldFontSize)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text("Password", fontSize = textFieldFontSize) },
                     visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = textFieldFontSize)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(
@@ -166,13 +173,19 @@ fun LoginPage(navController: NavController) {
                         }
                     },
                     enabled = !isLoading,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                         containerColor = Color.White,
                         contentColor = Color.Black
                     )
                 ) {
-                    Text(if (isSignup) "Sign Up" else "Login", color = Color.Black)
+                    Text(
+                        if (isSignup) "Sign Up" else "Login",
+                        color = Color.Black,
+                        fontSize = buttonFontSize
+                    )
                 }
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -182,7 +195,7 @@ fun LoginPage(navController: NavController) {
                 TextButton(onClick = { isSignup = !isSignup }) {
                     Text(
                         text = if (isSignup) "Already have an account? Login" else "Need an account? Sign Up",
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                        fontSize = textFieldFontSize,
                         fontWeight = FontWeight.Normal,
                         color = Color.White
                     )
@@ -191,7 +204,8 @@ fun LoginPage(navController: NavController) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         it,
-                        color = if (it.contains("failed")) MaterialTheme.colorScheme.error else Color.Black
+                        color = if (it.contains("failed")) MaterialTheme.colorScheme.error else Color.Black,
+                        fontSize = textFieldFontSize
                     )
                 }
             }
