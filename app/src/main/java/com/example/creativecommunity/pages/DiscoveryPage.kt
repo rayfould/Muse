@@ -213,17 +213,6 @@ fun DiscoveryPage(navController: NavController) {
                 }
             }
         }
-        // Floating Action Button for New Post
-        FloatingActionButton(
-            onClick = { navController.navigate("new_post/discovery") },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(28.dp)
-        ) {
-            Text("+")
-        }
     }
 }
 
