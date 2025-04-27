@@ -29,7 +29,7 @@ fun Comment(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = (indentLevel * 24).dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
+            .padding(start = 16.dp + (indentLevel * 24).dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
     ) {
         AsyncImage(
             model = profileImage,

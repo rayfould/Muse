@@ -2,6 +2,7 @@ package com.example.creativecommunity.pages
 
 import android.util.Log
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -154,12 +155,23 @@ fun DiscoveryPage(navController: NavController) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Back Button
-            TextButton(
-                onClick = { navController.navigateUp() },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            // Header with opacity background
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Text("← Back")
+                Text(
+                    text = "Posts For You",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
             }
             // Posts List
             if (isLoading) {
