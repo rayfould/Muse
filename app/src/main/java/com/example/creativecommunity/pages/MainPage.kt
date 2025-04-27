@@ -1,6 +1,5 @@
 package com.example.creativecommunity.pages
 
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
@@ -31,22 +31,36 @@ import androidx.compose.foundation.background
 
 @Composable
 fun MainPage(navController: NavController) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    // for screen sizes - different values for different screens; don't want super stretched UI
+    val isWideScreen = screenWidth > 600
+    
+    // DIFFERENT VALUES FOR DIFFERENT SCREEN SIZES
+    val horizontalPadding = if (isWideScreen) 32.dp else 20.dp
+    val cardHeight = if (isWideScreen) 160.dp else 140.dp
+    val gridSpacing = if (isWideScreen) 20.dp else 16.dp
+    val titleFontSize = if (isWideScreen) 24.sp else 20.sp
+    val subtitleFontSize = if (isWideScreen) 18.sp else 16.sp
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
+            .padding(horizontalPadding),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Welcome to Muse!",
             style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = titleFontSize
         )
         Text(
             text = "Dive into your creative community",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 24.dp),
+            fontSize = subtitleFontSize
         )
 
         // Add an image URL for each category
@@ -64,18 +78,18 @@ fun MainPage(navController: NavController) {
             Triple("SCIENCE", "Science Experiments", "https://i.imgur.com/GJ2d9PP.gif")
         )
 
-        // Now using LazyVerticalGrid
+        // Now using LazyVerticalGrid with responsive columns
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            columns = if (isWideScreen) GridCells.Fixed(3) else GridCells.Fixed(2),
+            verticalArrangement = Arrangement.spacedBy(gridSpacing),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing),
             modifier = Modifier.fillMaxSize()
         ) {
             items(categories) { (key, displayName, imageUrl) ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp)
+                        .height(cardHeight)
                         .clickable { navController.navigate("category_feed/$key") },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -95,13 +109,13 @@ fun MainPage(navController: NavController) {
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)) // For behind text light background over images
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
                                 .padding(8.dp)
                         ) {
                             Text(
                                 text = displayName,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontSize = 16.sp,
+                                fontSize = if (isWideScreen) 18.sp else 16.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
