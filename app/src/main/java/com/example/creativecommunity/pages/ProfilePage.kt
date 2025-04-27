@@ -687,7 +687,7 @@ fun ProfilePage(navController: NavController) {
                     }
 
                     Button(
-                        onClick = { /* TODO: Handle about us */ },
+                        onClick = { navController.navigate("about_us") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surface,

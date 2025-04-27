@@ -1,28 +1,28 @@
 package com.example.creativecommunity
 
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-
-import com.example.creativecommunity.pages.LoginPage
-import com.example.creativecommunity.pages.NewPostPage
-import com.example.creativecommunity.pages.MainPage
-import com.example.creativecommunity.pages.CategoryFeed
-import com.example.creativecommunity.pages.IndividualPostPage
-import com.example.creativecommunity.pages.DiscoveryPage
-import com.example.creativecommunity.pages.ProfilePage
-import com.example.creativecommunity.pages.SavedPostsPage
-import com.example.creativecommunity.pages.MyPostsPage
-import com.example.creativecommunity.pages.ViewProfilePage
-import com.example.creativecommunity.pages.UserPostsPage
-import com.example.creativecommunity.components.BottomNavigationBar
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.creativecommunity.components.BottomNavigationBar
+import com.example.creativecommunity.pages.AboutUsPage
+import com.example.creativecommunity.pages.CategoryFeed
+import com.example.creativecommunity.pages.DiscoveryPage
+import com.example.creativecommunity.pages.IndividualPostPage
+import com.example.creativecommunity.pages.LoginPage
+import com.example.creativecommunity.pages.MainPage
+import com.example.creativecommunity.pages.MyPostsPage
+import com.example.creativecommunity.pages.NewPostPage
+import com.example.creativecommunity.pages.ProfilePage
+import com.example.creativecommunity.pages.SavedPostsPage
+import com.example.creativecommunity.pages.UserPostsPage
+import com.example.creativecommunity.pages.ViewProfilePage
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
@@ -131,27 +131,37 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         }
         
         // New route for viewing other users' profiles
-        composable("user/{userId}") { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
-            if (userId != null) {
-                 // We don't want the bottom bar on this specific page usually
-                 // If needed later, wrap with Scaffold like other pages
-                ViewProfilePage(navController = navController, userId = userId)
-            } else {
-                // Optional: Handle error or navigate back if userId is missing
-                // For now, it will just display nothing, which might be okay
+        composable("view_profile/{userId}") { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    ViewProfilePage(navController = navController, userId = userId)
+                }
             }
         }
 
         // New route for viewing posts by a specific user
         composable("user_posts/{userId}") { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
-            if (userId != null) {
-                // Again, omitting Scaffold/BottomNavBar, adjust if needed
-                UserPostsPage(navController = navController, userId = userId)
-            } else {
-                // Handle missing userId
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            Scaffold(
+                bottomBar = {
+                    BottomNavigationBar(navController = navController)
+                }
+            ) { paddingValues ->
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    UserPostsPage(navController = navController, userId = userId)
+                }
             }
+        }
+        
+        // Add the route for AboutUsPage
+        composable("about_us") {
+            // About Us doesn't need the bottom nav bar, so no Scaffold here typically
+            AboutUsPage(navController)
         }
     }
 }
