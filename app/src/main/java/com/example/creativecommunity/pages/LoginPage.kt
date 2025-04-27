@@ -1,5 +1,8 @@
 package com.example.creativecommunity.pages
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +36,7 @@ import androidx.navigation.NavController
 import com.example.creativecommunity.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -42,6 +48,12 @@ fun LoginPage(navController: NavController) {
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+    var showLogin by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(2000)
+        showLogin = true
+    }
 
     val configuration = LocalConfiguration.current
     val landscape = configuration.screenWidthDp > 600
@@ -52,95 +64,99 @@ fun LoginPage(navController: NavController) {
             .fillMaxSize()
             .padding(20.dp)
     }
-    Column(
-        modifier = columnModifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    )
-    // Title
-    {
-        Text(
-            text = "Muse",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 40.sp
-            ),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 32.dp),
-            color = MaterialTheme.colorScheme.primary
-        )
-        // Email and Password fields
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        // Login \ Sign Up Button
-        Button(
-            onClick = {
-                isLoading = true
-                scope.launch {
-                    try {
-                        if (isSignup) {
-                            SupabaseClient.client.auth.signUpWith(Email) {
-                                this.email = email
-                                this.password = password
-                                this.data = kotlinx.serialization.json.buildJsonObject {
-                                    put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
+    AnimatedVisibility(
+        visible = showLogin,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Column(
+            modifier = columnModifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Muse",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 40.sp
+                ),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 32.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            // Email and Password fields
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            // Login \ Sign Up Button
+            Button(
+                onClick = {
+                    isLoading = true
+                    scope.launch {
+                        try {
+                            if (isSignup) {
+                                SupabaseClient.client.auth.signUpWith(Email) {
+                                    this.email = email
+                                    this.password = password
+                                    this.data = kotlinx.serialization.json.buildJsonObject {
+                                        put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
+                                    }
+                                }
+                                SupabaseClient.client.auth.signInWith(Email) {
+                                    this.email = email
+                                    this.password = password
+                                }
+                                navController.navigate("main") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            } else {
+                                SupabaseClient.client.auth.signInWith(Email) {
+                                    this.email = email
+                                    this.password = password
+                                }
+                                navController.navigate("main") {
+                                    popUpTo("login") { inclusive = true }
                                 }
                             }
-                            SupabaseClient.client.auth.signInWith(Email) {
-                                this.email = email
-                                this.password = password
-                            }
-                            navController.navigate("main") {
-                                popUpTo("login") { inclusive = true }
-                            }
-                        } else {
-                            SupabaseClient.client.auth.signInWith(Email) {
-                                this.email = email
-                                this.password = password
-                            }
-                            navController.navigate("main") {
-                                popUpTo("login") { inclusive = true }
-                            }
+                        } catch (e: Exception) {
+                            message = "${if (isSignup) "Signup" else "Login"} failed: ${e.message}"
+                        } finally {
+                            isLoading = false
                         }
-                    } catch (e: Exception) {
-                        message = "${if (isSignup) "Signup" else "Login"} failed: ${e.message}"
-                    } finally {
-                        isLoading = false
                     }
-                }
-            },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (isSignup) "Sign Up" else "Login")
-        }
-        if (isLoading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator()
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        TextButton(onClick = { isSignup = !isSignup }) {
-            Text(if (isSignup) "Already have an account? Login" else "Need an account? Sign Up")
-        }
-        message?.let {
+                },
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isSignup) "Sign Up" else "Login")
+            }
+            if (isLoading) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator()
+            }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                it,
-                color = if (it.contains("failed")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            )
+            TextButton(onClick = { isSignup = !isSignup }) {
+                Text(if (isSignup) "Already have an account? Login" else "Need an account? Sign Up")
+            }
+            message?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    it,
+                    color = if (it.contains("failed")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
