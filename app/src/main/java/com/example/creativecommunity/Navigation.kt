@@ -1,11 +1,13 @@
 package com.example.creativecommunity
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,141 +28,231 @@ import com.example.creativecommunity.pages.ViewProfilePage
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isWideScreen = screenWidth > 600
+
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { 
             LoginPage(navController) 
         }
         
         composable("main") { 
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        MainPage(navController)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    MainPage(navController)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        MainPage(navController)
+                    }
                 }
             }
         }
         
         composable("discovery") { 
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        DiscoveryPage(navController)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    DiscoveryPage(navController)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        DiscoveryPage(navController)
+                    }
                 }
             }
         }
         
         composable("profile") { 
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        ProfilePage(navController)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    ProfilePage(navController)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        ProfilePage(navController)
+                    }
                 }
             }
         }
         
         composable("saved_posts") { 
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        SavedPostsPage(navController)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    SavedPostsPage(navController)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        SavedPostsPage(navController)
+                    }
                 }
             }
         }
         
         composable("new_post/{category}") { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        NewPostPage(navController, category)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    NewPostPage(navController, category)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        NewPostPage(navController, category)
+                    }
                 }
             }
         }
         
         composable("category_feed/{category}") { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        CategoryFeed(navController, category)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    CategoryFeed(navController, category)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        CategoryFeed(navController, category)
+                    }
                 }
             }
         }
         
         composable("individual_post/{postId}") { backStackEntry ->
             val postId = backStackEntry.arguments?.getString("postId") ?: ""
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        IndividualPostPage(navController = navController, postId = postId)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    IndividualPostPage(navController = navController, postId = postId)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        IndividualPostPage(navController = navController, postId = postId)
+                    }
                 }
             }
         }
         
         composable("my_posts") { 
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        MyPostsPage(navController)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    MyPostsPage(navController)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        MyPostsPage(navController)
+                    }
                 }
             }
         }
         
-        // New route for viewing other users' profiles
         composable("view_profile/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        ViewProfilePage(navController = navController, userId = userId)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    ViewProfilePage(navController = navController, userId = userId)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        ViewProfilePage(navController = navController, userId = userId)
+                    }
                 }
             }
         }
 
-        // New route for viewing posts by a specific user
         composable("user_posts/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            Scaffold(
-                bottomBar = {
+            if (isWideScreen) {
+                Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
+                    Box(modifier = Modifier.weight(1f)) {
+                        UserPostsPage(navController = navController, userId = userId)
+                    }
                 }
-            ) { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    UserPostsPage(navController = navController, userId = userId)
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigationBar(navController = navController)
+                    }
+                ) { paddingValues ->
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        UserPostsPage(navController = navController, userId = userId)
+                    }
                 }
             }
         }
         
-        // Add the route for AboutUsPage
         composable("about_us") {
-            // About Us doesn't need the bottom nav bar, so no Scaffold here typically
             AboutUsPage(navController)
         }
     }

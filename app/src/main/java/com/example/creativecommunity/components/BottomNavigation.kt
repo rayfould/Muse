@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -27,51 +28,98 @@ fun BottomNavigationBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isWideScreen = screenWidth > 600
+
     val items = listOf(
         Triple("discovery", "Discovery", Icons.Default.Search),
         Triple("main", "Home", Icons.Default.Home),
         Triple("profile", "Profile", Icons.Default.Person)
     )
 
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp,
-        modifier = modifier
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-    ) {
-        items.forEach { (route, label, icon) ->
-            val selected = currentRoute == route
-            NavigationBarItem(
-                icon = {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(
-                                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                else Color.Transparent
-                            )
-                            .padding(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+    if (isWideScreen) {
+        NavigationRail(
+            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = modifier
+                .clip(RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp))
+        ) {
+            items.forEach { (route, label, icon) ->
+                val selected = currentRoute == route
+                NavigationRailItem(
+                    icon = {
+                        Box(
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .padding(2.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else Color.Transparent
+                                )
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = label,
+                                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .padding(2.dp)
+                            )
+                        }
+                    },
+                    label = {
+                        Text(
+                            label,
+                            style = if (selected) MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary)
+                                    else MaterialTheme.typography.labelMedium
                         )
-                    }
-                },
-                label = {
-                    Text(
-                        label,
-                        style = if (selected) MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary)
-                                else MaterialTheme.typography.labelMedium
-                    )
-                },
-                selected = selected,
-                onClick = { navController.navigate(route) }
-            )
+                    },
+                    selected = selected,
+                    onClick = { navController.navigate(route) }
+                )
+            }
+        }
+    } else {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = modifier
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+        ) {
+            items.forEach { (route, label, icon) ->
+                val selected = currentRoute == route
+                NavigationBarItem(
+                    icon = {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else Color.Transparent
+                                )
+                                .padding(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = label,
+                                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .padding(2.dp)
+                            )
+                        }
+                    },
+                    label = {
+                        Text(
+                            label,
+                            style = if (selected) MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary)
+                                    else MaterialTheme.typography.labelMedium
+                        )
+                    },
+                    selected = selected,
+                    onClick = { navController.navigate(route) }
+                )
+            }
         }
     }
 } 
