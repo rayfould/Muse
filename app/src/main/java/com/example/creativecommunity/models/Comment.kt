@@ -15,18 +15,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.TextButton
 
 
 @Composable
 fun Comment(
     profileImage: String,
     username: String,
-    commentText: String
+    commentText: String,
+    onReplyClicked: (() -> Unit)? = null,
+    indentLevel: Int = 0
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 10.dp)
+            .padding(start = (indentLevel * 24).dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
     ) {
         AsyncImage(
             model = profileImage,
@@ -42,6 +45,11 @@ fun Comment(
             Text(text = username)
             Spacer(modifier = Modifier.height(5.dp))
             Text(text = commentText)
+            if (onReplyClicked != null) {
+                androidx.compose.material3.TextButton(onClick = onReplyClicked) {
+                    Text("Reply")
+                }
+            }
         }
     }
 }

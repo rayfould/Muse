@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,7 +58,8 @@ data class IndividualPostDetails(
 data class PostComment(
     val id: Int,
     val content: String,
-    val users: UserInfo // Who made the comment
+    val users: UserInfo, // Who made the comment
+    val parent_id: Int? = null // Add parent_id for threading
 )
 
 // Data for comments - need to serialize data --> supabase
@@ -65,8 +67,37 @@ data class PostComment(
 data class NewComment(
     val user_id: Int,
     val post_id: Int,
-    val content: String
+    val content: String,
+    val parent_id: Int? = null // Add parent_id for threading
 )
+
+// FOR COMMENT REPLYING - using parent attribute in comment table to store "parent" - comments are linked together as a linked list
+// The original comments to the post will have no parent, with any replies therein having the comment id as the parent id
+@Composable
+fun ThreadedComments(
+    comments: List<PostComment>,
+    parentId: Int? = null,
+    onReply: (PostComment) -> Unit,
+    indentLevel: Int = 0
+) {
+    val children = comments.filter { it.parent_id == parentId }
+    children.forEach { comment ->
+        Comment(
+            profileImage = comment.users.profile_image ?: "https://via.placeholder.com/40",
+            username = comment.users.username,
+            commentText = comment.content,
+            onReplyClicked = { onReply(comment) },
+            indentLevel = indentLevel
+        )
+        androidx.compose.material3.Divider()
+        ThreadedComments(
+            comments = comments,
+            parentId = comment.id,
+            onReply = onReply,
+            indentLevel = indentLevel + 1
+        )
+    }
+}
 
 @Composable
 fun IndividualPostPage(navController: NavController, postId: String?) {
@@ -84,6 +115,8 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
     val currentAuthId = currentUser?.id
 
     val postIdInt = postId?.toIntOrNull()
+
+    var replyingToComment by remember { mutableStateOf<PostComment?>(null) }
 
     LaunchedEffect(postIdInt) {
         if (postIdInt == null) {
@@ -111,7 +144,7 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
              Log.d("IndividualPost", "Fetching comments for post ID: $postIdInt")
              val commentsResult = withContext(Dispatchers.IO) {
                  SupabaseClient.client.postgrest.from("comments")
-                     .select(Columns.raw("id, content, users!inner(id, username, email, profile_image, bio, auth_id)")) { // Fetch comment user info too
+                     .select(Columns.raw("id, content, parent_id, users!inner(id, username, email, profile_image, bio, auth_id)")) { // Fetch comment user info too
                          filter { eq("post_id", postIdInt) }
                          order("created_at", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
                      }
@@ -184,17 +217,11 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                                  Text("No comments yet.", modifier = Modifier.padding(16.dp)) 
                             }
                         } else {
-                            items(comments, key = { it.id }) { comment ->
-                                Comment(
-                                    // Pass data for the comment composable
-                                    // Assuming Comment composable takes these parameters
-                                    // We might need to adjust Comment.kt if not
-                                    profileImage = comment.users.profile_image ?: "https://via.placeholder.com/40",
-                                    username = comment.users.username,
-                                    commentText = comment.content
-                                    // TODO: Make comment username clickable? navController.navigate("user/${comment.users.auth_id}")
+                            item {
+                                ThreadedComments(
+                                    comments = comments,
+                                    onReply = { comment -> replyingToComment = comment }
                                 )
-                                Divider()
                             }
                         }
                     }
@@ -202,6 +229,10 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                 // Comment input field and submit button
                 if (currentAuthId != null && postIdInt != null) {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        if (replyingToComment != null) {
+                            Text("Replying to @${replyingToComment!!.users.username}", color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
                         OutlinedTextField(
                             value = commentInput,
                             onValueChange = { commentInput = it },
@@ -228,13 +259,18 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                                                 // Insert comment
                                                 withContext(Dispatchers.IO) {
                                                     SupabaseClient.client.postgrest["comments"].insert(
-                                                        NewComment(user_id = userId, post_id = postIdInt, content = commentInput)
+                                                        NewComment(
+                                                            user_id = userId,
+                                                            post_id = postIdInt,
+                                                            content = commentInput,
+                                                            parent_id = replyingToComment?.id // Set parent_id if replying
+                                                        )
                                                     )
                                                 }
                                                 // Refresh comments
                                                 val commentsResult = withContext(Dispatchers.IO) {
                                                     SupabaseClient.client.postgrest.from("comments")
-                                                        .select(Columns.raw("id, content, users!inner(id, username, email, profile_image, bio, auth_id)")) {
+                                                        .select(Columns.raw("id, content, parent_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
                                                             filter { eq("post_id", postIdInt) }
                                                             order("created_at", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
                                                         }
@@ -242,6 +278,7 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                                                 }
                                                 comments = commentsResult
                                                 commentInput = ""
+                                                replyingToComment = null
                                             } else {
                                                 submitError = "Could not find your user account."
                                             }
@@ -257,6 +294,11 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Text(if (isSubmitting) "Posting..." else "Post")
+                        }
+                        if (replyingToComment != null) {
+                            TextButton(onClick = { replyingToComment = null }) {
+                                Text("Cancel reply")
+                            }
                         }
                         if (submitError != null) {
                             Text(submitError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
