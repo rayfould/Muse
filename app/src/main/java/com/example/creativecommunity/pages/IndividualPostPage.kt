@@ -1,6 +1,7 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -39,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.creativecommunity.SupabaseClient
@@ -136,6 +139,11 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
     var isUpdating by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
 
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val isWideScreen = screenWidth > 900
+    val maxContentWidth = if (isWideScreen) 600.dp else screenWidth.dp
+
     LaunchedEffect(postIdInt) {
         if (postIdInt == null) {
             error = "Invalid Post ID"
@@ -181,311 +189,334 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Back Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-            
-            // Show menu button only if current user is the post owner
-            if (currentAuthId == postDetails?.users?.auth_id) {
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Edit Post") },
-                            onClick = {
-                                showMenu = false
-                                isEditing = true
-                                editedContent = postDetails?.content ?: ""
-                            },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete Post") },
-                            onClick = {
-                                showMenu = false
-                                showDeleteDialog = true
-                            },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                        )
-                    }
-                }
-            }
-        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Opacity background layer
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+        )
 
-        when {
-            isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+        // Main content
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Back Button
+            Row(
+                modifier = Modifier.fillMaxWidth().widthIn(max = maxContentWidth).align(Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
-            }
-            error != null -> {
-                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text(error!!, color = MaterialTheme.colorScheme.error)
-                 }
-            }
-            postDetails != null -> {
-                Column(modifier = Modifier.weight(1f)) {
-                    LazyColumn(modifier = Modifier.fillMaxSize().weight(1f)) {
-                        // Display the Post itself
-                        item {
-                            if (isEditing) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    OutlinedTextField(
-                                        value = editedContent,
-                                        onValueChange = { editedContent = it },
-                                        label = { Text("Edit caption") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        enabled = !isUpdating
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                        TextButton(
-                                            onClick = { isEditing = false },
-                                            enabled = !isUpdating
-                                        ) {
-                                            Text("Cancel")
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    isUpdating = true
-                                                    try {
-                                                        val result = withContext(Dispatchers.IO) {
-                                                            SupabaseClient.client.postgrest["posts"]
-                                                                .update({
-                                                                    set("content", editedContent)
-                                                                }) {
-                                                                    filter { eq("id", postIdInt!!) }
-                                                                }
-                                                        }
-                                                        postDetails = postDetails?.copy(content = editedContent)
-                                                        isEditing = false
-                                                    } catch (e: Exception) {
-                                                        error = "Failed to update post: ${e.message}"
-                                                    } finally {
-                                                        isUpdating = false
-                                                    }
-                                                }
-                                            },
-                                            enabled = !isUpdating && editedContent.isNotEmpty()
-                                        ) {
-                                            Text("Save")
-                                        }
-                                    }
-                                }
-                            } else {
-                                Post(
-                                    navController = navController,
-                                    authorId = postDetails!!.users.auth_id,
-                                    postId = postDetails!!.id,
-                                    profileImage = postDetails!!.users.profile_image ?: "https://via.placeholder.com/40",
-                                    username = postDetails!!.users.username,
-                                    postImage = postDetails!!.image_url,
-                                    caption = postDetails!!.content ?: "",
-                                    likeCount = 0,
-                                    commentCount = comments.size,
-                                    onCommentClicked = { showCommentBox = !showCommentBox },
-                                    onImageClick = { }
-                                )
-                            }
-                            Divider()
+                
+                // Show menu button only if current user is the post owner
+                if (currentAuthId == postDetails?.users?.auth_id) {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
                         }
-
-                        // Display Comments Header
-                        item {
-                            Text(
-                                text = "Comments (${comments.size})", 
-                                style = MaterialTheme.typography.headlineSmall, 
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Edit Post") },
+                                onClick = {
+                                    showMenu = false
+                                    isEditing = true
+                                    editedContent = postDetails?.content ?: ""
+                                },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete Post") },
+                                onClick = {
+                                    showMenu = false
+                                    showDeleteDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
                             )
                         }
-                        
-                        // Display Comments
-                        if (comments.isEmpty()) {
-                            item { 
-                                 Text("No comments yet.", modifier = Modifier.padding(16.dp)) 
-                            }
-                        } else {
-                            item {
-                                ThreadedComments(
-                                    comments = comments,
-                                    onReply = { comment ->
-                                        replyingToComment = comment
-                                        showCommentBox = true
-                                    }
-                                )
-                            }
-                        }
                     }
                 }
-                // Comment input field and submit button (toggleable)
-                if (currentAuthId != null && postIdInt != null && showCommentBox) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        if (replyingToComment != null) {
-                            Text("Replying to @${replyingToComment!!.users.username}", color = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
-                        OutlinedTextField(
-                            value = commentInput,
-                            onValueChange = { commentInput = it },
-                            label = { Text("Add a comment...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isSubmitting
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Button(
-                                onClick = {
-                                    showCommentBox = false
-                                    submitError = null
-                                    replyingToComment = null
-                                },
-                                enabled = !isSubmitting
-                            ) {
-                                Text("Cancel")
-                            }
-                            Button(
-                                onClick = {
-                                    if (commentInput.isNotBlank()) {
-                                        isSubmitting = true
-                                        submitError = null
-                                        coroutineScope.launch {
-                                            try {
-                                                // Look up numeric user_id from auth_id
-                                                val userId = withContext(Dispatchers.IO) {
-                                                    val response = SupabaseClient.client.postgrest["users"]
-                                                        .select { filter { eq("auth_id", currentAuthId) } }
-                                                    val users = response.decodeList<com.example.creativecommunity.models.UserInfo>()
-                                                    users.firstOrNull()?.id
-                                                }
-                                                if (userId != null) {
-                                                    // Insert comment
-                                                    withContext(Dispatchers.IO) {
-                                                        SupabaseClient.client.postgrest["comments"].insert(
-                                                            NewComment(
-                                                                user_id = userId,
-                                                                post_id = postIdInt,
-                                                                content = commentInput,
-                                                                parent_id = replyingToComment?.id // Set parent_id if replying
-                                                            )
-                                                        )
-                                                    }
-                                                    // Refresh comments
-                                                    val commentsResult = withContext(Dispatchers.IO) {
-                                                        SupabaseClient.client.postgrest.from("comments")
-                                                            .select(Columns.raw("id, content, parent_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
-                                                                filter { eq("post_id", postIdInt) }
-                                                                order("created_at", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
+            }
+
+            when {
+                isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                error != null -> {
+                     Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text(error!!, color = MaterialTheme.colorScheme.error)
+                     }
+                }
+                postDetails != null -> {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .widthIn(max = maxContentWidth)
+                            .align(Alignment.CenterHorizontally)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Display the Post itself
+                            item {
+                                if (isEditing) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        OutlinedTextField(
+                                            value = editedContent,
+                                            onValueChange = { editedContent = it },
+                                            label = { Text("Edit caption") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            enabled = !isUpdating
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End
+                                        ) {
+                                            TextButton(
+                                                onClick = { isEditing = false },
+                                                enabled = !isUpdating
+                                            ) {
+                                                Text("Cancel")
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Button(
+                                                onClick = {
+                                                    coroutineScope.launch {
+                                                        isUpdating = true
+                                                        try {
+                                                            val result = withContext(Dispatchers.IO) {
+                                                                SupabaseClient.client.postgrest["posts"]
+                                                                    .update({
+                                                                        set("content", editedContent)
+                                                                    }) {
+                                                                        filter { eq("id", postIdInt!!) }
+                                                                    }
                                                             }
-                                                            .decodeList<PostComment>()
+                                                            postDetails = postDetails?.copy(content = editedContent)
+                                                            isEditing = false
+                                                        } catch (e: Exception) {
+                                                            error = "Failed to update post: ${e.message}"
+                                                        } finally {
+                                                            isUpdating = false
+                                                        }
                                                     }
-                                                    comments = commentsResult
-                                                    commentInput = ""
-                                                    replyingToComment = null
-                                                    showCommentBox = false
-                                                } else {
-                                                    submitError = "Could not find your user account."
-                                                }
-                                            } catch (e: Exception) {
-                                                submitError = "Failed to submit comment: ${e.message}"
-                                            } finally {
-                                                isSubmitting = false
+                                                },
+                                                enabled = !isUpdating && editedContent.isNotEmpty()
+                                            ) {
+                                                Text("Save")
                                             }
                                         }
                                     }
-                                },
-                                enabled = !isSubmitting && commentInput.isNotBlank(),
-                            ) {
-                                Text(if (isSubmitting) "Posting..." else "Post")
+                                } else {
+                                    Post(
+                                        navController = navController,
+                                        authorId = postDetails!!.users.auth_id,
+                                        postId = postDetails!!.id,
+                                        profileImage = postDetails!!.users.profile_image ?: "https://via.placeholder.com/40",
+                                        username = postDetails!!.users.username,
+                                        postImage = postDetails!!.image_url,
+                                        caption = postDetails!!.content ?: "",
+                                        likeCount = 0,
+                                        commentCount = comments.size,
+                                        onCommentClicked = { showCommentBox = !showCommentBox },
+                                        onImageClick = { }
+                                    )
+                                }
+                                Divider()
                             }
-                        }
-//                        if (replyingToComment != null) {
-//                            TextButton(onClick = { replyingToComment = null }) {
-//                                Text("Cancel reply")
-//                            }
-//                        }
-                        if (submitError != null) {
-                            Text(submitError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
+
+                            // Display Comments Header
+                            item {
+                                Text(
+                                    text = "Comments (${comments.size})", 
+                                    style = MaterialTheme.typography.headlineSmall, 
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                            
+                            // Display Comments
+                            if (comments.isEmpty()) {
+                                item { 
+                                     Text("No comments yet.", modifier = Modifier.padding(16.dp)) 
+                                }
+                            } else {
+                                item {
+                                    ThreadedComments(
+                                        comments = comments,
+                                        onReply = { comment ->
+                                            replyingToComment = comment
+                                            showCommentBox = true
+                                        }
+                                    )
+                                }
+                            }
+                            // Comment input field and submit button (toggleable)
+                            if (currentAuthId != null && postIdInt != null && showCommentBox) {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp)
+                                            .widthIn(max = maxContentWidth),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        if (replyingToComment != null) {
+                                            Text("Replying to @${replyingToComment!!.users.username}", color = MaterialTheme.colorScheme.primary)
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                        }
+                                        OutlinedTextField(
+                                            value = commentInput,
+                                            onValueChange = { commentInput = it },
+                                            label = { Text("Add a comment...") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            enabled = !isSubmitting
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Button(
+                                                onClick = {
+                                                    showCommentBox = false
+                                                    submitError = null
+                                                    replyingToComment = null
+                                                },
+                                                enabled = !isSubmitting
+                                            ) {
+                                                Text("Cancel")
+                                            }
+                                            Button(
+                                                onClick = {
+                                                    if (commentInput.isNotBlank()) {
+                                                        isSubmitting = true
+                                                        submitError = null
+                                                        coroutineScope.launch {
+                                                            try {
+                                                                // Look up numeric user_id from auth_id
+                                                                val userId = withContext(Dispatchers.IO) {
+                                                                    val response = SupabaseClient.client.postgrest["users"]
+                                                                        .select { filter { eq("auth_id", currentAuthId) } }
+                                                                    val users = response.decodeList<com.example.creativecommunity.models.UserInfo>()
+                                                                    users.firstOrNull()?.id
+                                                                }
+                                                                if (userId != null) {
+                                                                    // Insert comment
+                                                                    withContext(Dispatchers.IO) {
+                                                                        SupabaseClient.client.postgrest["comments"].insert(
+                                                                            NewComment(
+                                                                                user_id = userId,
+                                                                                post_id = postIdInt,
+                                                                                content = commentInput,
+                                                                                parent_id = replyingToComment?.id // Set parent_id if replying
+                                                                            )
+                                                                        )
+                                                                    }
+                                                                    // Refresh comments
+                                                                    val commentsResult = withContext(Dispatchers.IO) {
+                                                                        SupabaseClient.client.postgrest.from("comments")
+                                                                            .select(Columns.raw("id, content, parent_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
+                                                                                filter { eq("post_id", postIdInt) }
+                                                                                order("created_at", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
+                                                                            }
+                                                                            .decodeList<PostComment>()
+                                                                    }
+                                                                    comments = commentsResult
+                                                                    commentInput = ""
+                                                                    replyingToComment = null
+                                                                    showCommentBox = false
+                                                                } else {
+                                                                    submitError = "Could not find your user account."
+                                                                }
+                                                            } catch (e: Exception) {
+                                                                submitError = "Failed to submit comment: ${e.message}"
+                                                            } finally {
+                                                                isSubmitting = false
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                enabled = !isSubmitting && commentInput.isNotBlank(),
+                                            ) {
+                                                Text(if (isSubmitting) "Posting..." else "Post")
+                                            }
+                                        }
+                                        if (submitError != null) {
+                                            Text(submitError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            }
-            else -> {
-                // Should not happen if not loading and no error, but handle just in case
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("Post not found.")
+                else -> {
+                    // Should not happen if not loading and no error, but handle just in case
+                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text("Post not found.")
+                    }
                 }
             }
         }
-    }
 
-    // Delete confirmation dialog
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Post") },
-            text = { Text("Are you sure you want to delete this post? This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            isDeleting = true
-                            try {
-                                withContext(Dispatchers.IO) {
-                                    // First, delete all likes for this post
-                                    SupabaseClient.client.postgrest["likes"]
-                                        .delete {
-                                            filter { eq("post_id", postIdInt!!) }
-                                        }
-                                    // Then, delete all comments for this post
-                                    SupabaseClient.client.postgrest["comments"]
-                                        .delete {
-                                            filter { eq("post_id", postIdInt!!) }
-                                        }
-                                    // Then, delete the post itself
-                                    SupabaseClient.client.postgrest["posts"]
-                                        .delete {
-                                            filter { eq("id", postIdInt!!) }
-                                        }
+        // Delete confirmation dialog
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Post") },
+                text = { Text("Are you sure you want to delete this post? This action cannot be undone.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                isDeleting = true
+                                try {
+                                    withContext(Dispatchers.IO) {
+                                        // First, delete all likes for this post
+                                        SupabaseClient.client.postgrest["likes"]
+                                            .delete {
+                                                filter { eq("post_id", postIdInt!!) }
+                                            }
+                                        // Then, delete all comments for this post
+                                        SupabaseClient.client.postgrest["comments"]
+                                            .delete {
+                                                filter { eq("post_id", postIdInt!!) }
+                                            }
+                                        // Then, delete the post itself
+                                        SupabaseClient.client.postgrest["posts"]
+                                            .delete {
+                                                filter { eq("id", postIdInt!!) }
+                                            }
+                                    }
+                                    navController.popBackStack()
+                                } catch (e: Exception) {
+                                    error = "Failed to delete post: ${e.message}"
+                                } finally {
+                                    isDeleting = false
+                                    showDeleteDialog = false
                                 }
-                                navController.popBackStack()
-                            } catch (e: Exception) {
-                                error = "Failed to delete post: ${e.message}"
-                            } finally {
-                                isDeleting = false
-                                showDeleteDialog = false
                             }
-                        }
-                    },
-                    enabled = !isDeleting
-                ) {
-                    Text("Delete")
+                        },
+                        enabled = !isDeleting
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDeleteDialog = false },
+                        enabled = !isDeleting
+                    ) {
+                        Text("Cancel")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeleteDialog = false },
-                    enabled = !isDeleting
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
+            )
+        }
     }
 }
