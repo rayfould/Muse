@@ -66,6 +66,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.6") // for navigation between different pages
     implementation("io.coil-kt:coil-compose:2.5.0") // For previewing images
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // For HTTP uploading to Imgur using ImgurAPI
+
+    implementation("androidx.compose.material:material-icons-extended")
     
     // DataStore for persisting likes
     implementation("androidx.datastore:datastore-preferences:1.0.0")

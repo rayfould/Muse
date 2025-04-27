@@ -10,12 +10,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -121,6 +128,14 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
     var replyingToComment by remember { mutableStateOf<PostComment?>(null) }
     var showCommentBox by remember { mutableStateOf(false) }
 
+    // New state variables for edit/delete functionality
+    var showMenu by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var editedContent by remember { mutableStateOf("") }
+    var isUpdating by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+
     LaunchedEffect(postIdInt) {
         if (postIdInt == null) {
             error = "Invalid Post ID"
@@ -168,8 +183,45 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Back Button
-        IconButton(onClick = { navController.popBackStack() }) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            
+            // Show menu button only if current user is the post owner
+            if (currentAuthId == postDetails?.users?.auth_id) {
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit Post") },
+                            onClick = {
+                                showMenu = false
+                                isEditing = true
+                                editedContent = postDetails?.content ?: ""
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete Post") },
+                            onClick = {
+                                showMenu = false
+                                showDeleteDialog = true
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                    }
+                }
+            }
         }
 
         when {
@@ -188,20 +240,70 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                     LazyColumn(modifier = Modifier.fillMaxSize().weight(1f)) {
                         // Display the Post itself
                         item {
-                            Post(
-                                navController = navController, // Pass NavController
-                                authorId = postDetails!!.users.auth_id, // Pass author's auth_id
-                                postId = postDetails!!.id,
-                                profileImage = postDetails!!.users.profile_image ?: "https://via.placeholder.com/40",
-                                username = postDetails!!.users.username,
-                                postImage = postDetails!!.image_url,
-                                caption = postDetails!!.content ?: "",
-                                // Like/Comment counts fetched within Post composable now
-                                likeCount = 0, // Placeholder - Post fetches its own counts
-                                commentCount = comments.size, // We have comment count here
-                                onCommentClicked = { showCommentBox = !showCommentBox },
-                                onImageClick = { /* Already on the page, maybe zoom? */ }
-                            )
+                            if (isEditing) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    OutlinedTextField(
+                                        value = editedContent,
+                                        onValueChange = { editedContent = it },
+                                        label = { Text("Edit caption") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !isUpdating
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        TextButton(
+                                            onClick = { isEditing = false },
+                                            enabled = !isUpdating
+                                        ) {
+                                            Text("Cancel")
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Button(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    isUpdating = true
+                                                    try {
+                                                        val result = withContext(Dispatchers.IO) {
+                                                            SupabaseClient.client.postgrest["posts"]
+                                                                .update({
+                                                                    set("content", editedContent)
+                                                                }) {
+                                                                    filter { eq("id", postIdInt!!) }
+                                                                }
+                                                        }
+                                                        postDetails = postDetails?.copy(content = editedContent)
+                                                        isEditing = false
+                                                    } catch (e: Exception) {
+                                                        error = "Failed to update post: ${e.message}"
+                                                    } finally {
+                                                        isUpdating = false
+                                                    }
+                                                }
+                                            },
+                                            enabled = !isUpdating && editedContent.isNotEmpty()
+                                        ) {
+                                            Text("Save")
+                                        }
+                                    }
+                                }
+                            } else {
+                                Post(
+                                    navController = navController,
+                                    authorId = postDetails!!.users.auth_id,
+                                    postId = postDetails!!.id,
+                                    profileImage = postDetails!!.users.profile_image ?: "https://via.placeholder.com/40",
+                                    username = postDetails!!.users.username,
+                                    postImage = postDetails!!.image_url,
+                                    caption = postDetails!!.content ?: "",
+                                    likeCount = 0,
+                                    commentCount = comments.size,
+                                    onCommentClicked = { showCommentBox = !showCommentBox },
+                                    onImageClick = { }
+                                )
+                            }
                             Divider()
                         }
 
@@ -331,5 +433,59 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                 }
             }
         }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Post") },
+            text = { Text("Are you sure you want to delete this post? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            isDeleting = true
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    // First, delete all likes for this post
+                                    SupabaseClient.client.postgrest["likes"]
+                                        .delete {
+                                            filter { eq("post_id", postIdInt!!) }
+                                        }
+                                    // Then, delete all comments for this post
+                                    SupabaseClient.client.postgrest["comments"]
+                                        .delete {
+                                            filter { eq("post_id", postIdInt!!) }
+                                        }
+                                    // Then, delete the post itself
+                                    SupabaseClient.client.postgrest["posts"]
+                                        .delete {
+                                            filter { eq("id", postIdInt!!) }
+                                        }
+                                }
+                                navController.popBackStack()
+                            } catch (e: Exception) {
+                                error = "Failed to delete post: ${e.message}"
+                            } finally {
+                                isDeleting = false
+                                showDeleteDialog = false
+                            }
+                        }
+                    },
+                    enabled = !isDeleting
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !isDeleting
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

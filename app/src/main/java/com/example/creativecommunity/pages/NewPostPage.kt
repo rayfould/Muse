@@ -13,7 +13,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -21,8 +35,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -35,15 +52,27 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 
 @Composable
 fun NewPostPage(navController: NavController, category: String) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Post serializable class
     @Serializable
@@ -56,28 +85,17 @@ fun NewPostPage(navController: NavController, category: String) {
     )
 
     // For caption
-    var postCaption by remember { mutableStateOf(TextFieldValue("")) }
+    var postCaption by remember { mutableStateOf("") }
+    val maxCaptionLength = 300
 
     // For photos
     var currentlyUploading by remember { mutableStateOf(false) }
-    // shouldUpload - just boolean for checking if post button was clicked
     var shouldUpload by remember { mutableStateOf(false) }
-
-    // contains Current image uploaded - use this to check if should call API (if no image then don't call it)
     var currImage by remember { mutableStateOf<Uri?>(null) }
-    // this is our imageURL need to pass into db later...
     var imgurImageURL by remember { mutableStateOf<String?>(null) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf<String?>(null) }
 
-//    https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.GetContent
-//    https://fvilarino.medium.com/using-activity-result-contracts-in-jetpack-compose-14b179fb87de
-//    val imagePicker = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.GetContent(),
-//        onResult = { uri ->
-//            // 3
-//            hasImage = uri != null
-//            imageUri = uri
-//        }
-//    )
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -85,249 +103,253 @@ fun NewPostPage(navController: NavController, category: String) {
         imgurImageURL = null
     }
 
-
-    // Temp URI for camera capture
-    val contentResolver = LocalContext.current.contentResolver
+    // Ensure tempFileUri is created only once per composable instance
     val tempFileUri = remember {
-        FileProvider.getUriForFile(context, "com.example.creativecommunity.fileprovider", java.io.File(context.cacheDir, "temp_image.jpg"))
+        FileProvider.getUriForFile(
+            context,
+            "com.example.creativecommunity.fileprovider",
+            java.io.File(context.cacheDir, "temp_image.jpg")
+        )
     }
-
-    // Camera Launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            // currImage is set by the preview URI below
-            currImage = tempFileUri // Set currImage after snap
+            currImage = tempFileUri
             imgurImageURL = null
         }
     }
 
+    val cardShape: Shape = RoundedCornerShape(20.dp)
+    val imageShape: Shape = RoundedCornerShape(16.dp)
 
-
-
-//https://github.com/AKiniyalocts/imgur-android/tree/master
-    //https://stackoverflow.com/questions/13549559/getcontentresolver-openinputstreamuri-throws-filenotfoundexception
     suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
-        // Access android file system to read the image data
         val contentResolver = context.contentResolver
         val bytes = contentResolver.openInputStream(imageUri)?.use { stream ->
             stream.readBytes()
         }
-        if (bytes == null) {
-            Log.e("SupabaseTest", "Failed to read image bytes from URI: $imageUri")
-            return@withContext null
-        }
-        Log.d("SupabaseTest", "Image bytes read: ${bytes.size / 1024} KB")
-
-        // Convert to Base64 with NO_WRAP
+        if (bytes == null) return@withContext null
         val base64Image = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        if (base64Image.isEmpty()) {
-            Log.e("SupabaseTest", "Base64 encoding failed: empty string")
-            return@withContext null
-        }
-        Log.d("SupabaseTest", "Base64 length: ${base64Image.length}, Sample: ${base64Image.take(50)}...")
-
-        // Create HTTP request
+        if (base64Image.isEmpty()) return@withContext null
         val okHttpClient = OkHttpClient()
         val requestBody = FormBody.Builder()
             .add("image", base64Image)
-            .add("type", "base64") // Specify Base64 format
+            .add("type", "base64")
             .build()
-        Log.d("SupabaseTest", "Request body size: ${requestBody.contentLength()} bytes")
-        Log.d("SupabaseTest", "Using Client-ID: ${BuildConfig.IMGUR_CLIENT_ID.take(8)}...") // Partial for safety
         val request = Request.Builder()
-            // add Imgur endpoint for uploading image, required Authorization header for api call
             .header("Authorization", "Client-ID ${BuildConfig.IMGUR_CLIENT_ID}")
             .header("Content-Type", "application/x-www-form-urlencoded")
-            .header("User-Agent", "MuseApp/1.0") // Add User-Agent to avoid server suspicion
+            .header("User-Agent", "MuseApp/1.0")
             .post(requestBody)
             .url("https://api.imgur.com/3/image")
             .build()
-        Log.d("SupabaseTest", "Request headers: ${request.headers}")
-        Log.d("SupabaseTest", "Request URL: ${request.url}")
-
-        // https://apidocs.imgur.com/
-        val response = okHttpClient.newCall(request).execute() // makes a HTTP call
+        val response = okHttpClient.newCall(request).execute()
         val responseBody = response.body?.string() ?: ""
-        if (!response.isSuccessful) {
-            Log.e("SupabaseTest", "Imgur upload failed: ${response.code} - ${response.message}")
-            Log.e("SupabaseTest", "Response body: $responseBody")
-            Log.d("SupabaseTest", "Response headers: ${response.headers}")
-            return@withContext null
-        }
-        Log.d("SupabaseTest", "Response body: $responseBody")
-
-        // extract json response from imgur fetch
-        //        val json = response.body?.string()
-        //        val linkRegex = """"link":"(.*?)"""".toRegex()
-        //        return@withContext linkRegex.find(json ?: "")?.groups?.get(1)?.value?.replace("\\/", "/")
-
-        // creates matching regex for looking for a link - like how used to do in python
+        if (!response.isSuccessful) return@withContext null
         val linkRegex = """"link":"(.*?)"""".toRegex()
-        // example response from Imgur parsing with regex
-        // val json = """
-        //{
-        //  "data": {
-        //    "id": "abc123",
-        //    "title": null,
-        //    "description": null,
-        //    "datetime": 1641234567,
-        //    "type": "image/jpeg",
-        //    "animated": false,
-        //    "width": 1024,
-        //    "height": 768,
-        //    "size": 123456,
-        //    "views": 0,
-        //    "bandwidth": 0,
-        //    "deletehash": "XYZ789",
-        //    "link": "https:\/\/i.imgur.com\/abc123.jpg"            <----
-        //  },
-        //  "success": true,
-        //  "status": 200
-        //}
-        val matchResult = linkRegex.find(responseBody) // apply the regex to the link response
-        val fetchedLink = matchResult?.groups?.get(1)?.value // gets actual link from matchResult
-        val actualLink = fetchedLink?.replace("\\/", "/") // remove all escape keys
-        //Log link issues
-        if (actualLink == null) {
-            Log.e("SupabaseTest", "Failed to extract link from Imgur response: $responseBody")
-        }
-        return@withContext actualLink // 'return' is not allowed here - made me add @withContext
+        val matchResult = linkRegex.find(responseBody)
+        val fetchedLink = matchResult?.groups?.get(1)?.value
+        val actualLink = fetchedLink?.replace("\\/", "/")
+        return@withContext actualLink
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
-            .padding(top = 20.dp),
-        verticalArrangement = Arrangement.Top
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("You are creating a new '$category' post")
-        Spacer(modifier = Modifier.height(5.dp))
-        Text("This week's challenge: Paint a park near you!")
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Take a photo button
-            Button(
-                onClick = {
-                    cameraLauncher.launch(tempFileUri)
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Take a photo")
-            }
-            Text("or")
-            Button(
-                // replaced placeholder with image picker method
-                onClick = { imagePickerLauncher.launch("image/*") }, // image/* means choose any image type file
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Upload a photo")
-            }
-        }
-
-        // Display our image
-//        https://developer.android.com/develop/ui/compose/graphics/images/loading
-//        AsyncImage(
-//            model = "https://example.com/image.jpg",
-//            contentDescription = "Translated description of what the image contains"
-//        )
-//        https://stackoverflow.com/questions/58606651/what-is-the-purpose-of-let-keyword-in-kotlin
-//        let is one of Kotlin's Scope functions which allow you to execute a code block within the context of an object. In this case the context object is str. There are five of them: let, run, with, apply, and also. Their usages range from but are not exclusive to initialization and mapping.
-        currImage?.let {
-            AsyncImage(model = it, contentDescription = null, modifier = Modifier.height(100.dp))
-        }
-        imgurImageURL?.let {
-            Text("Link to image on imgur: $it")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Caption input text field
-        TextField(
-            value = postCaption,
-            onValueChange = { postCaption = it },
-            label = { Text("Write your caption here...") },
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier)
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-        )
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // launch coroutine to upload image to imgur
-        if (shouldUpload && currImage != null) { // MAKE SURE POST button clicked AND an image is actually selected
-            LaunchedEffect(currImage) { // coroutine
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                Text("Create a New Post", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 8.dp))
+                Text("Category: $category", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().shadow(4.dp, cardShape),
+                    shape = cardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Step 1: Add a Photo", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ElevatedButton(
+                                onClick = { cameraLauncher.launch(tempFileUri) },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Filled.CameraAlt, contentDescription = "Take Photo", modifier = Modifier.padding(end = 4.dp))
+                                Text("Take Photo")
+                            }
+                            ElevatedButton(
+                                onClick = { imagePickerLauncher.launch("image/*") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Filled.PhotoLibrary, contentDescription = "Upload Photo", modifier = Modifier.padding(end = 4.dp))
+                                Text("Upload Photo")
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        currImage?.let {
+                            AsyncImage(
+                                model = it,
+                                contentDescription = "Selected image",
+                                modifier = Modifier
+                                    .height(220.dp)
+                                    .fillMaxWidth()
+                                    .clip(imageShape)
+                                    .shadow(8.dp, imageShape)
+                            )
+                        } ?: Text("No image selected", color = Color.Gray, modifier = Modifier.padding(8.dp))
+                    }
+                }
+            }
+            item { Spacer(modifier = Modifier.height(20.dp)) }
+            item { Divider(modifier = Modifier.padding(vertical = 8.dp)) }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().shadow(4.dp, cardShape),
+                    shape = cardShape,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Step 2: Write a Caption", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextField(
+                            value = postCaption,
+                            onValueChange = {
+                                if (it.length <= maxCaptionLength) postCaption = it
+                            },
+                            label = { Text("Caption (max $maxCaptionLength chars)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = false,
+                            maxLines = 5,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Text("${postCaption.length}/$maxCaptionLength", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        }
+                    }
+                }
+            }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+            item {
+                ElevatedButton(
+                    onClick = {
+                        if (currImage == null) {
+                            coroutineScope.launch { snackbarHostState.showSnackbar("Please select an image.") }
+                            return@ElevatedButton
+                        }
+                        if (postCaption.isBlank()) {
+                            coroutineScope.launch { snackbarHostState.showSnackbar("Please enter a caption.") }
+                            return@ElevatedButton
+                        }
+                        if (!currentlyUploading) {
+                            shouldUpload = true
+                            currentlyUploading = true
+                            imgurImageURL = null
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !currentlyUploading,
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    if (currentlyUploading) {
+                        CircularProgressIndicator(modifier = Modifier.height(24.dp).width(24.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Posting...")
+                    } else {
+                        Text("Post to Community")
+                    }
+                }
+            }
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item {
+                OutlinedButton(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                    Text("Back to $category Feed")
+                }
+            }
+            // Feedback dialogs
+            item {
+                if (showSuccessDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showSuccessDialog = false; navController.popBackStack() },
+                        title = { Text("Success!") },
+                        text = { Text("Your post was submitted successfully.") },
+                        confirmButton = {
+                            ElevatedButton(onClick = { showSuccessDialog = false; navController.popBackStack() }) {
+                                Text("OK")
+                            }
+                        }
+                    )
+                }
+            }
+            item {
+                if (showErrorDialog != null) {
+                    AlertDialog(
+                        onDismissRequest = { showErrorDialog = null },
+                        title = { Text("Error") },
+                        text = { Text(showErrorDialog ?: "") },
+                        confirmButton = {
+                            ElevatedButton(onClick = { showErrorDialog = null }) {
+                                Text("OK")
+                            }
+                        }
+                    )
+                }
+            }
+        }
+        // Upload logic
+        if (shouldUpload && currImage != null) {
+            LaunchedEffect(currImage, shouldUpload) {
                 try {
-                    val url = uploadImageToImgur(currImage!!) // upload to imgur if currImage not null
+                    val url = uploadImageToImgur(currImage!!)
                     if (url != null) {
-                        val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id // UUID from auth.users
-                        Log.d("SupabaseTest", "Auth ID: $authId")
+                        val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
                         val userResponse = SupabaseClient.client.postgrest.from("users")
                             .select(Columns.raw("id")) { filter { eq("auth_id", authId) } }
-                            .decodeSingle<Map<String, Int>>() // Get user_id as integer
-                        Log.d("SupabaseTest", "User response: $userResponse")
+                            .decodeSingle<Map<String, Int>>()
                         val userId = userResponse["id"] ?: throw Exception("User ID not found in response")
                         val mockPromptId = 1 // Replace with real prompt ID later
                         SupabaseClient.client.postgrest.from("posts").insert(
                             Post(
                                 user_id = userId,
                                 prompt_id = mockPromptId,
-                                content = postCaption.text,
+                                content = postCaption,
                                 image_url = url,
                                 category = category
                             )
                         )
-                        imgurImageURL = "Post submitted successfully!" // Update UI with success message
+                        showSuccessDialog = true
                     } else {
-                        imgurImageURL = "Upload failed - try again later" // More informative message
-                        Log.e("SupabaseTest", "Post failed: Imgur returned null URL")
+                        showErrorDialog = "Image upload failed. Please try again."
                     }
                 } catch (e: Exception) {
-                    imgurImageURL = "Error: ${e.message}" // Show error in UI
-                    Log.e("SupabaseTest", "Upload crashed", e)
+                    showErrorDialog = "Error: ${e.message}"
                 }
-                shouldUpload = false // prevent infinite loop for uploading, stop after image uploaded
-                currentlyUploading = false // reset the button functionality --> redisplay "Post to Community" instead of uploading... forever
+                shouldUpload = false
+                currentlyUploading = false
             }
-        }
-
-        // Post button
-//        Button(
-//            onClick = { /* Submit the post --> integrate with Supabase */ },
-//            modifier = Modifier.fillMaxWidth()
-//        ) {
-//            Text("Post to the Community!")
-//        }
-        Button(
-            onClick = {
-                if (currImage != null && !currentlyUploading) {
-                    shouldUpload = true
-                    currentlyUploading = true
-                    imgurImageURL = null
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = currImage != null && !currentlyUploading // DISABLE BUTTON when upload in progress
-        ) {
-            Text(if (currentlyUploading) "Uploading..." else "Post to the Community!")
-        }
-
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Button(onClick = {
-            // Acts as a "back" button, pops this page off the stack
-            // The login page is defaulted as the starting page in the stack, goes back to the Login page
-            navController.popBackStack()
-        }) {
-            Text("Back to $category Feed")
         }
     }
 }
