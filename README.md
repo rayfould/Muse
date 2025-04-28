@@ -103,7 +103,7 @@ Interactions with database so far:
 5. Username and PFP fetching from the dB for the submissions
 
 Database Schema:
-![Database Image](schema.svg)
+![Database Image](supabase_schema_png2.png)
 
 ## Multidevice Testing
 Tested on:
@@ -122,7 +122,9 @@ Notes: visually appealing UI design on both devices in both orientations, functi
   - Looking at our project in smaller sections and creating flow diagrams of how our users would use our app allowed us to identify different models and how they should be related to one another
 - Camera sensor
   - Took some time to set up - resolved using forums, documentation, etc.
-
+- Updating like counts - originally wanted to send a request for every time a person liked / unliked a request; with many users this would generate so many requests - so using a different approach. We now check every so often to see if the user liked any posts and then push those local changes / state / counts to supabase.
+- Had some issues with UI - landscape vs portrait mode, needed to use configuration.screenWidthDp and that solved the issue - now can display different grid dimensions and NavigationRail/NavigationBar based on screen sizes
+- A lot of text was hard to read based on UI changes - wanted to have backgorund images, ended up adding alpha color backgrounds
 
 ## Initial Project Proposal
 
