@@ -103,7 +103,7 @@ Interactions with database so far:
 5. Username and PFP fetching from the dB for the submissions
 
 Database Schema:
-![Database Image](supabase_updated_schema.svg)
+![Database Image](supabase_schema_png2.svg)
 
 ## Multidevice Testing
 Tested on:
