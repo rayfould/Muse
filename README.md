@@ -12,7 +12,7 @@
 - [Project Setup](#project-setup)
 - [API Setup](#api-setup)
 - [Database Setup](#database-setup)
-- [Sensor Setup])(#sensor-setup)
+- [Sensor Setup](#sensor-setup)
 - [Multidevice Testing](#multidevice-testing)
 - [Challenges](#challenges)
 - [Initial Project Proposal](#initial-project-proposal)
