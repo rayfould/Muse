@@ -185,21 +185,21 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 
 **Friend #1**<br><br>
 **Feedback:** <br>
-I really like the animations at the start - I'm trying to get more into drawing, I'm taking a drawing class right now so I like the idea of this app. It's a place where I can also share my work with others and maybe see what other people are doing. I use Instagram, interest, and other places to get inspiration for drawing, this could be another place to draw inspiration from - I like the app!<br><br>
+I really like the animations at the start - it feels like a real app haha. I'm trying to get more into drawing, I'm taking a drawing class right now so I like the idea of this app. It's a place where I can also share my work with others and maybe see what other people are doing. I use Instagram, interest, and other places to get inspiration for drawing, this could be another place to draw inspiration from - I like the app!<br><br>
 **Suggested improvements:**<br>
 Maybe have a way to add friends or follow people whose art that you like would be cool, maybe like a different feed for the people you are following and only their posts show up in that feed. <br><br>
 
 **Friend #2**<br><br>
 **Feedback:**<br><br>
-<br>
+I like the layout on the home screen with the categories, feels very organized - I know how the app works, pretty straightforward for a new user, I like that I can physically click and navigate into different communities - it feels better than maybe using a filter or search bar.<br>
 **Suggested improvements:**<br><br>
-<br>
+Fade in could be a bit slower to get a better effect. In the home page with the categories, could fade out the background eye image.<br>
 
 **Friend #3**<br><br>
 **Feedback:**<br><br>
-<br>
+I like that there's always new creative prompts for each week - it is another way to see how different people interpret each prompt in their own style and get inspiration from there. Great way to get people to share new posts by having a prompt where they can contribute to the creations of this week in the community.<br>
 **Suggested improvements:**<br><br>
-<br>
+Maybe you could have a grid view of posts on the tablet view - this could look kind of like Pinterest how they do it - doesn't have to be strictly a vertical feed. Also since you have a new weekly prompt, maybe be able to sort by previous weeks' prompts to see other weeks creations and only show the current week's posts in the feed or something. <br>
 
 ## Initial Project Proposal
 
