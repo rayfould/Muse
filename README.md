@@ -45,6 +45,23 @@
 13. View saved posts as well as your own posts
 
 ## Design Decisions
+1. Focus on building communities around creative outlets
+   - Added a discovery page instead of tournaments/monthly competitions - we decided that our app's purpose is to inspire and share work with others, rather than making our app about who can create the best art
+   - We show new posts at the top of each community, not just the most liked or most commented so far. We want to build communities around everyone who is contributing to the community.
+2. Simple, easy to follow user flow
+   - We want users to focus their time and energy on creating and interacting with others, so we have well-thought-out pages that provide key features to post creation, post viewing, and interactions
+   - We manage our back stack well to ensure a smooth, seamless experience all around, and such that the user can never get lost and knows exactly where to go to find something.  
+3. Opening the floor for discussion and connection
+   - Creating Comments and Threadded Comments with replies was essential for our community-building process. Replying to any comment that sparks something you want to say brings our app to life. Originially, we were thinking about having just a long comment thread. After adding replies, even though it took a good amount of time to rethink our database setup, how comments are related to one another, and how we load our comments, we are much more satisfied with how this enables more freeflowing ideas between users.
+4. Login and App Startup
+   - Originally, we had a regular login screen with just a form
+   - Adding animations with slow fade-in and fade-out of images and text, this created a sense for the user that they are now entering a new space - not just logging in
+   - The decision to go with the colorful eye really made a large difference, especially on a larger tablet-like display.
+5. Portrait vs Landscape mode
+   - For larger screens like a tablet, we use dp dimension cutoffs (e.g. 600) to display our UI differently
+   - On tablets, we use more grid columns on the main page / all categories page
+   - We also change the NavigationBar to a NavigationRail, as well as all the other UI components that were originally super stretched out on a larger screen
+   - We decided not to change how comments and post feeds were displayed  on tablet vs landscape mode. We want the user to be able to see the posts as large as possible on their screen since the focus of the app is to look at people's creations, and if this sparks any conversation or curiosity, you have the option to click on the individual post and look at the comments under the post there. 
 
 ## Project Setup
 
