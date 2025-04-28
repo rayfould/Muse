@@ -190,14 +190,14 @@ I really like the animations at the start - it feels like a real app haha. I'm t
 Maybe have a way to add friends or follow people whose art that you like would be cool, maybe like a different feed for the people you are following and only their posts show up in that feed. <br><br>
 
 **Friend #2**<br><br>
-**Feedback:**<br><br>
-I like the layout on the home screen with the categories, feels very organized - I know how the app works, pretty straightforward for a new user, I like that I can physically click and navigate into different communities - it feels better than maybe using a filter or search bar.<br>
-**Suggested improvements:**<br><br>
+**Feedback:**<br>
+I like the layout on the home screen with the categories, feels very organized - I know how the app works, pretty straightforward for a new user, I like that I can physically click and navigate into different communities - it feels better than maybe using a filter or search bar.<br><br>
+**Suggested improvements:**<br>
 Fade in could be a bit slower to get a better effect. In the home page with the categories, could fade out the background eye image.<br>
 
 **Friend #3**<br><br>
 **Feedback:**<br>
-I like that there's always new creative prompts for each week - it is another way to see how different people interpret each prompt in their own style and get inspiration from there. Great way to get people to share new posts by having a prompt where they can contribute to the creations of this week in the community.<br>
+I like that there's always new creative prompts for each week - it is another way to see how different people interpret each prompt in their own style and get inspiration from there. Great way to get people to share new posts by having a prompt where they can contribute to the creations of this week in the community.<br><br>
 **Suggested improvements:**<br>
 Maybe you could have a grid view of posts on the tablet view - this could look kind of like Pinterest how they do it - doesn't have to be strictly a vertical feed. Also since you have a new weekly prompt, maybe be able to sort by previous weeks' prompts to see other weeks creations and only show the current week's posts in the feed or something. <br>
 
