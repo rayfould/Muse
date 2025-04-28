@@ -78,7 +78,8 @@ Database Schema:
 ## Multidevice Testing
 Tested on:
 - Nexus 5 (API 30. Android 11.0 ("R")), portrait phone mode
-- Pixel Tablet (API 36), tablet landscape mode
+- Medium Tablet API 31 (both landscape and portrait mode)
+- Pixel 5 API 31 (portrait mode phone)
 
 Notes: visually appealing UI design on both devices in both orientations, functionality remains the same.
 
