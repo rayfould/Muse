@@ -183,19 +183,23 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 
 ## User Testing and Feedback
 
-**Friend #1**<br>
+**Friend #1**<br><br>
 **Feedback:** <br>
-I really like the animations at the start - I'm trying to get more into drawing, I'm taking a drawing class right now so I like the idea of this app. It's a place where I can also share my work with others and maybe see what other people are doing. I use Instagram, interest, and other places to get inspiration for drawing, this could be another place to draw inspiration from - I like the app!<br>
+I really like the animations at the start - I'm trying to get more into drawing, I'm taking a drawing class right now so I like the idea of this app. It's a place where I can also share my work with others and maybe see what other people are doing. I use Instagram, interest, and other places to get inspiration for drawing, this could be another place to draw inspiration from - I like the app!<br><br>
 **Suggested improvements:**<br>
-Maybe have a way to add friends or follow people whose art that you like would be cool, maybe like a different feed for the people you are following and only their posts show up in that feed. <br>
+Maybe have a way to add friends or follow people whose art that you like would be cool, maybe like a different feed for the people you are following and only their posts show up in that feed. <br><br>
 
-Friend #2<br>
-Feedback:<br>
-Suggested improvements:<br>
+**Friend #2**<br><br>
+**Feedback:**<br><br>
+<br>
+**Suggested improvements:**<br><br>
+<br>
 
-Friend #3<br>
-Feedback:<br>
-Suggested improvements:<br>
+**Friend #3**<br><br>
+**Feedback:**<br><br>
+<br>
+**Suggested improvements:**<br><br>
+<br>
 
 ## Initial Project Proposal
 
