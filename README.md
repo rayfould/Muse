@@ -125,6 +125,7 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 - Updating like counts - originally wanted to send a request for every time a person liked / unliked a request; with many users this would generate so many requests - so using a different approach. We now check every so often to see if the user liked any posts and then push those local changes / state / counts to supabase.
 - Had some issues with UI - landscape vs portrait mode, needed to use configuration.screenWidthDp and that solved the issue - now can display different grid dimensions and NavigationRail/NavigationBar based on screen sizes
 - A lot of text was hard to read based on UI changes - wanted to have backgorund images, ended up adding alpha color backgrounds
+- Figuring out replying to comments - decided to add a "parent" field to comments, with original comments' parents being null, and when you reply to a comment, the replying comment "parent" field is the id of the comment it is replying to - this also allowed us to add details like indentation based on how many "parents" or how deep in the reply chain we got - this is more of a Reddit style approach to handling comment replies
 
 ## Initial Project Proposal
 
