@@ -18,15 +18,15 @@
 
 ## Project Setup
 
-Directory:<br><br>
+Directory:<br>
 
 CreativeCommunityApp.kt<br>
 MainActivity.kt<br>
 Navigation.kt<br>
-SupabaseClient.kt<br><br>
+SupabaseClient.kt<br>
 
 Components (folder)<br>
-|-->  BottomNavigation.kt<br><br>
+|-->  BottomNavigation.kt<br>
 
 Models (folder)<br>
 |--> 	Comment.kt	<br>
@@ -34,7 +34,7 @@ Models (folder)<br>
 |--> 	Post.kt	<br>
 |--> 	RecommendationModels.kt	<br>
 |--> 	UserModels.kt	<br>
-|--> 	UserProfile.kt	<br><br>
+|--> 	UserProfile.kt	<br>
 
 Pages (folder)<br>
 |--> 	AboutUsPage.kt	<br>
@@ -48,16 +48,16 @@ Pages (folder)<br>
 |--> 	ProfilePage.kt	<br>
 |--> 	SavedPostsPage.kt	<br>
 |--> 	UserPostsPage.kt	<br>
-|--> 	ViewProfilePage.kt	<br><br>
+|--> 	ViewProfilePage.kt	<br>
 
 UI/Theme (folder) <br>
 |--> 	Color.kt	<br>
 |--> 	Theme.kt	<br>
-|--> 	Type.kt	<br><br>
+|--> 	Type.kt	<br>
 
 Utils (folder) <br>
 |--> 	LikeManager.kt	<br>
-|--> 	PromptRotation.kt	<br><br>
+|--> 	PromptRotation.kt	<br
 
 
 We are using NavHost and navController to manage user flow throughout our program. Our entry point is MainActivity.kt which calls AppNavigation in Navigation.kt which manages all of the routes within our app. When we load a new page, we add it to the back stack, and to navigate back to the previous page, we use popBackStack() to pop off the most recent page to navigate back to the previous page. 
