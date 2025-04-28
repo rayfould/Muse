@@ -12,6 +12,7 @@
 - [Project Setup](#project-setup)
 - [API Setup](#api-setup)
 - [Database Setup](#database-setup)
+- [Sensor Setup])(#sensor-setup)
 - [Multidevice Testing](#multidevice-testing)
 - [Challenges](#challenges)
 - [Initial Project Proposal](#initial-project-proposal)
@@ -104,6 +105,10 @@ Interactions with database so far:
 
 Database Schema:
 ![Database Image](supabase_schema_png2.png)
+
+## Sensor Setup
+We are using the camera sensor
+- Took some time to get this set up, added functionality early in sprint 1
 
 ## Multidevice Testing
 Tested on:
