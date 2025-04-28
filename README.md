@@ -16,7 +16,8 @@
 - [Database Setup](#database-setup)
 - [Sensor Setup](#sensor-setup)
 - [Multidevice Testing](#multidevice-testing)
-- [Challenges](#challenges)
+- [Challenges Faced and Solutions](#challenges-faced-and-solutions)
+- [User Testing and Feedback](#user-testing-and-feedback)
 - [Initial Project Proposal](#initial-project-proposal)
 
 ## App Features
@@ -164,7 +165,7 @@ Tested on:
 
 Notes: visually appealing UI design on both devices in both orientations, functionality remains the same.
 
-## Challenges
+## Challenges Faced and Solutions
 - ImgurAPI integration
   - Kept running into errors
   - Trouble abstracting away our hidden key, initially we were able to use the key directly in our code, but to protect our API key for best practices, we needed to load it from our local properties and configure it using build.gradle - this took a bit of time to set up for both of us since we were trying different approaches. Once one of us figured this part out we pushed it and the other pulled so we were working with the same version of code. 
@@ -179,6 +180,20 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 - Figuring out replying to comments - decided to add a "parent" field to comments, with original comments' parents being null, and when you reply to a comment, the replying comment "parent" field is the id of the comment it is replying to - this also allowed us to add details like indentation based on how many "parents" or how deep in the reply chain we got - this is more of a Reddit style approach to handling comment replies
 - Login page animations - ended up showing / hiding different UI elements based on booleans that we define, and then to "animate" we would interchange boolean variable updates with delays / waiting for the animation and then change the next variable to show the next UI element / so on and so forth. Using AnimatedVisibility for this. Using LaunchedEffect to run all of our logic and time delays inside a coroutine.
 - Deleting a post - we have external references to the post in our comments and likes tables in Supabase, so we got tons of errors trying to delete a post. Ended up having to delete the likes and comments associated with the post first, then deleting the post itself so we were not left with any broken references.
+
+## User Testing and Feedback
+
+Friend #1
+Feedback:
+Suggested improvements:
+
+Friend #2
+Feedback:
+Suggested improvements:
+
+Friend #3
+Feedback:
+Suggested improvements:
 
 ## Initial Project Proposal
 
