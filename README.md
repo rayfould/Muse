@@ -127,6 +127,7 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 - A lot of text was hard to read based on UI changes - wanted to have backgorund images, ended up adding alpha color backgrounds
 - Figuring out replying to comments - decided to add a "parent" field to comments, with original comments' parents being null, and when you reply to a comment, the replying comment "parent" field is the id of the comment it is replying to - this also allowed us to add details like indentation based on how many "parents" or how deep in the reply chain we got - this is more of a Reddit style approach to handling comment replies
 - Login page animations - ended up showing / hiding different UI elements based on booleans that we define, and then to "animate" we would interchange boolean variable updates with delays / waiting for the animation and then change the next variable to show the next UI element / so on and so forth. Using AnimatedVisibility for this. Using LaunchedEffect to run all of our logic and time delays inside a coroutine.
+- Deleting a post - we have external references to the post in our comments and likes tables in Supabase, so we got tons of errors trying to delete a post. Ended up having to delete the likes and comments associated with the post first, then deleting the post itself so we were not left with any broken references.
 
 ## Initial Project Proposal
 
