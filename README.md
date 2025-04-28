@@ -31,15 +31,18 @@
    - Culinary Arts
    - Filmmaking
    - Science Experiments
-2. View other people's submissions in each of the creative communities, as well as in a Discovery page catered to you by an algorithm ranking system that takes in post creation date, number of likes, and number of comments
-3. ImgurAPI integration to upload selected photo to Imgur (store link to Imgur image in our db to save space on our end by not having to save images, just text URLs)
-4. Supabase secure storage for all users
-5. Edit and delete your own posts/captions
-6. Comment on other people's posts, reply to comments that you received, reply to comments on other people's posts - this is where we create the community where we can have discussions around people's creations
-7. Liking other people's posts - this helps encourage others in the community to find motivation to continue creating cool things!
-8. View and edit your own profile - profile image, bio, etc.
-9. Profile creation and login - create a new account
-10. Splash screen loading screen - helps users begin the immersive creative experience with a colorful eye - telling users that they can now open up their creative outlets in our app
+2. View other people's submissions in each of the creative communities
+3. A Discovery page catered to you by an algorithm ranking system that takes in post creation date, number of likes, and number of comments
+4. ImgurAPI integration to upload selected photo to Imgur (store link to Imgur image in our db to save space on our end by not having to save images, just text URLs)
+5. Supabase secure storage for all users
+6. Edit and delete your own posts/captions
+7. Comment on other people's posts, reply to comments that you received, reply to comments on other people's posts - this is where we create the community where we can have discussions around people's creations
+8. Liking other people's posts - this helps encourage others in the community to find motivation to continue creating cool things!
+9. View and edit your own profile - profile image, bio, username etc.
+10. Make account changes - e.g. changing password, change your email
+11. Account creation, login, and logout
+12. Splash screen loading screen - helps users begin the immersive creative experience with a colorful eye - telling users that they can now open up their creative outlets in our app
+13. View saved posts as well as your own posts
 
 ## Design Decisions
 
