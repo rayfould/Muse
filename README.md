@@ -18,17 +18,47 @@
 
 ## Project Setup
 
-MainActivity<br>
+Directory:<br><br>
+
+CreativeCommunityApp.kt<br>
+MainActivity.kt<br>
 Navigation.kt<br>
-SupabaseClient<br>
+SupabaseClient.kt<br><br>
+
+Components (folder)<br>
+|-->  BottomNavigation.kt<br><br>
+
+Models (folder)<br>
+|--> 	Comment.kt	<br>
+|--> 	LikeModels.kt	<br>
+|--> 	Post.kt	<br>
+|--> 	RecommendationModels.kt	<br>
+|--> 	UserModels.kt	<br>
+|--> 	UserProfile.kt	<br><br>
+
 Pages (folder)<br>
-|--> CategoryFeed.kt<br>
-|--> Comment.kt<br>
-|--> IndividualPostPage.kt<br>
-|--> LoginPage.kt<br>
-|--> MainPage.kt<br>
-|--> NewPostPage.kt<br>
-|--> Post.kt<br>
+|--> 	AboutUsPage.kt	<br>
+|--> 	CategoryFeed.kt	<br>
+|--> 	DiscoveryPage.kt	<br>
+|--> 	IndividualPostPage.kt	<br>
+|--> 	LoginPage.kt	<br>
+|--> 	MainPage.kt	<br>
+|--> 	MyPostsPage.kt	<br>
+|--> 	NewPostPage.kt	<br>
+|--> 	ProfilePage.kt	<br>
+|--> 	SavedPostsPage.kt	<br>
+|--> 	UserPostsPage.kt	<br>
+|--> 	ViewProfilePage.kt	<br><br>
+
+UI/Theme (folder) <br>
+|--> 	Color.kt	<br>
+|--> 	Theme.kt	<br>
+|--> 	Type.kt	<br><br>
+
+Utils (folder) <br>
+|--> 	LikeManager.kt	<br>
+|--> 	PromptRotation.kt	<br><br>
+
 
 We are using NavHost and navController to manage user flow throughout our program. Our entry point is MainActivity.kt which calls AppNavigation in Navigation.kt which manages all of the routes within our app. When we load a new page, we add it to the back stack, and to navigate back to the previous page, we use popBackStack() to pop off the most recent page to navigate back to the previous page. 
 
