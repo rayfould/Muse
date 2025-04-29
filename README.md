@@ -131,11 +131,13 @@ From the BottomNavigation.kt which is on every page, users can route to the foll
 2. MainPage
 3. ProfilePage --> can go to MyPostsPage or SavedPostsPage from here
 
-**Notes:**
+**Notes:**<br>
 Post.kt
 - A reusable template for displaying posts, used in CategoryFeed.kt and IndividualPostPage.kt<br>
+
 Comment.kt
 - A reusable template for displaying comments, used in IndividualPostPage.kt<br>
+
 NewPostPage.kt
 - Includes both options for uploading a photo or taking a photo using the camera sensor
 - ImgurAPI integration to upload the file to imgur for easy file storage, and we store the url to the Imgur photo in Supabase
