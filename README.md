@@ -122,7 +122,7 @@ MainPage.kt - Defaults to the main page where the user can select a creative cat
 CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage, also changes prompts from PromptRotation, displays like counts using LikeManager - e.g. a listener<br>
 `       ↓                                    ↓`<br>
 IndividualPostPage.kt`                `NewPostPage.kt<br>
-`       ↓
+`       ↓`<br>
 Can view a user profile<br>
 
 Also: <br>
