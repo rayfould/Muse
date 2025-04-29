@@ -113,15 +113,23 @@ We are using NavHost and navController to manage user flow throughout our progra
 An example user flow:<br>
 MainActivity.kt<br>
 `    ↓`<br>
-Navigation.kt<br>
+LoginPage.kt - User either can create a new account or log into existing account; also on startup plays a startup animation welcoming the user to Muse<br>
 `    ↓`<br>
-LoginPage.kt - User either can create a new account or log into existing account<br>
+Navigation.kt - takes in BottomNavigation.kt from components folder to either display NavigationBar or NavigationRail based on screen size<br>
 `    ↓`<br>
-MainPage.kt - User can select a creative category to explore, categories displayed as buttons<br>
+MainPage.kt - Defaults to the main page where the user can select a creative category to explore, categories displayed in a responsive grid format<br>
 `    ↓`<br>
-CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage<br>
+CategoryFeed.kt - User can see and interact with posts within the community - liking the post, viewing comments, clicking on the comment button brings you to the IndividualPostPage, also changes prompts from PromptRotation, displays like counts using LikeManager - e.g. a listener<br>
 `       ↓                                    ↓`<br>
 IndividualPostPage.kt`                `NewPostPage.kt<br>
+`       ↓
+Can view a user profile<br>
+
+Also: <br>
+From the BottomNavigation.kt which is on every page, users can route to the following pages (e.g. from any page can navigate to the following pages:)
+1. DiscoveryPage
+2. MainPage
+3. ProfilePage --> can go to MyPostsPage or SavedPostsPage from here
 
 **Notes:**
 Post.kt
@@ -148,7 +156,11 @@ Interactions with database so far:
 2. Categories page connected to the categorical keys inside the dB, so that each post now links to its category key, and we can fetch them and sort them, etc
 3. Added submission storage into the dB. It now stores the image, links to the user and the prompt, stores date of creation, its category, etc
 4. Submission fetching into post feed
-5. Username and PFP fetching from the dB for the submissions
+5. Username and PFP fetching from the dB for the submissions and comments
+6. Saving relationships between comments and users when a user creates a new comment
+7. Updating the like count and comment count
+8. Pulling weekly prompts for creative communities from Supabase
+9. Updating saved post relationship between post and user
 
 Database Schema:
 ![Database Image](supabase_schema_png2.png)
@@ -177,7 +189,7 @@ Notes: visually appealing UI design on both devices in both orientations, functi
 - Updating like counts - originally wanted to send a request for every time a person liked / unliked a request; with many users this would generate so many requests - so using a different approach. We now check every so often to see if the user liked any posts and then push those local changes / state / counts to supabase.
 - Had some issues with UI - landscape vs portrait mode, needed to use configuration.screenWidthDp and that solved the issue - now can display different grid dimensions and NavigationRail/NavigationBar based on screen sizes
 - A lot of text was hard to read based on UI changes - wanted to have backgorund images, ended up adding alpha color backgrounds
-- Figuring out replying to comments - decided to add a "parent" field to comments, with original comments' parents being null, and when you reply to a comment, the replying comment "parent" field is the id of the comment it is replying to - this also allowed us to add details like indentation based on how many "parents" or how deep in the reply chain we got - this is more of a Reddit style approach to handling comment replies
+- Figuring out replying to comments - decided to add a "parent" field to comments, with original comments' parents being null, and when you reply to a comment, the replying comment "parent" field is the id of the comment it is replying to - this also allowed us to add details like indentation based on how many "parents" or how deep in the reply chain we got - this is more of a Reddit style approach to handling comment replies; using a recursive method to display all comments under a post - this also helps with indentation to visualize reply comment hierarchy
 - Login page animations - ended up showing / hiding different UI elements based on booleans that we define, and then to "animate" we would interchange boolean variable updates with delays / waiting for the animation and then change the next variable to show the next UI element / so on and so forth. Using AnimatedVisibility for this. Using LaunchedEffect to run all of our logic and time delays inside a coroutine.
 - Deleting a post - we have external references to the post in our comments and likes tables in Supabase, so we got tons of errors trying to delete a post. Ended up having to delete the likes and comments associated with the post first, then deleting the post itself so we were not left with any broken references.
 
