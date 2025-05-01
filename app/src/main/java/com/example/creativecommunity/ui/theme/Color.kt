@@ -47,3 +47,10 @@ val GradientEndBlue = Color(0xFF195DBA)
 // val Purple40 = Color(0xFF6650a4)
 // val PurpleGrey40 = Color(0xFF625b71)
 // val Pink40 = Color(0xFF7D5260)
+
+val SurfaceDark = BackgroundNavy
+val OnSurfaceDark = OnPrimaryWhite
+
+// Custom container color for MainPage grid
+val DeepAquaContainer = Color(0xFF1B3D4D) // Dark, desaturated teal/blue-green
+val OnDeepAquaContainer = Color(0xFFE0E5E8) // Light blue-gray for contrast
