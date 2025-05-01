@@ -51,7 +51,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
-import com.example.creativecommunity.models.CommentIdOnly
 import com.example.creativecommunity.models.Post
 import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.utils.LikeManager
