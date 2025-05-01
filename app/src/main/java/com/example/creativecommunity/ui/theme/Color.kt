@@ -16,6 +16,16 @@ val OnTertiaryDark = Color(0xFF1A1A1A)        // Very Dark Gray
 val ErrorSoftCoral = Color(0xFFFF6B6B)       // Soft Coral Red
 val OnErrorWhite = Color(0xFFFFFFFF)          // Pure White
 
+// Add back the red for specific use like the prompt gradient
+val HighlightRed = Color(0xFFD7263D)       // Bold Warm Red from original scheme
+
+// Define orange for sunset gradient
+val SunsetOrange = Color(0xFFFFA500)     // Bright Orange
+
+// Define colors for the specific requested gradient
+val GradientStartOrangeRed = Color(0xFFBD4733)
+val GradientEndBlue = Color(0xFF195DBA)
+
 // Comment out or remove the previous scheme's colors
 // val PrimaryRed = Color(0xFFD7263D)
 // val OnPrimaryWhite = Color(0xFFFFFFFF)
