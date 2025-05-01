@@ -58,15 +58,6 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 
-@Serializable
-data class UserInfo(
-    val id: Int,
-    val username: String,
-    val email: String,
-    val profile_image: String? = null,
-    val bio: String? = null,
-    val auth_id: String
-)
 
 @Serializable
 data class SavedPost(

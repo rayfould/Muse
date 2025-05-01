@@ -6,15 +6,42 @@ import kotlin.math.absoluteValue
 import kotlin.math.ln
 import kotlin.random.Random
 
+// --- Define Interfaces (Renamed) ---
+interface IUserData { // RENAMED
+    val username: String?
+}
+
+interface IPostData { // RENAMED
+    val user: IUserData // Use renamed interface
+}
+
+interface IPostWithEngagementData { // RENAMED
+    val post: IPostData // Use renamed interface
+    val likeCount: Int
+    val commentCount: Int
+}
+// --- End Interfaces ---
+
 @Serializable
 data class DiscoveryPost(
     val id: Int,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
     @SerialName("category") val category: String,
-    @SerialName("users") val user: UserInfo,
+    @SerialName("users") override val user: UserInfo, // Implement PostData via UserInfo
     @SerialName("created_at") val created_at: String? = null
-)
+) : IPostData // Implement PostData
+
+// Modify UserInfo to implement RENAMED interface
+@Serializable
+data class UserInfo(
+    val id: Int,
+    override val username: String, // Implement UserData
+    val email: String,
+    val profile_image: String? = null,
+    val bio: String? = null,
+    val auth_id: String
+) : IUserData
 
 /**
  * Model to hold all metrics needed for scoring posts
@@ -66,20 +93,19 @@ object RecommendationEngine {
     }
     
     /**
-     * Compute author engagement: average likes and comments per post
+     * Compute author engagement (GENERIC VERSION)
+     * Accepts any list where elements implement RENAMED interface
      */
-    fun computeAuthorEngagement(posts: List<DiscoveryPostWithCounts>): Map<String, Float> {
+    fun <T : IPostWithEngagementData> computeAuthorEngagement(posts: List<T>): Map<String, Float> { // Use renamed interface
         val authorPostCounts = mutableMapOf<String, Int>()
         val authorEngagementSums = mutableMapOf<String, Int>()
         
-        posts.forEach { post ->
-            val username = post.post.user.username ?: return@forEach
-            
             // Increment post count for this author
+        posts.forEach { postData -> 
+            val username = postData.post.user.username ?: return@forEach
             authorPostCounts[username] = (authorPostCounts[username] ?: 0) + 1
-            
             // Add engagement metrics
-            val engagement = post.likeCount + post.commentCount
+            val engagement = postData.likeCount + postData.commentCount
             authorEngagementSums[username] = (authorEngagementSums[username] ?: 0) + engagement
         }
         
@@ -93,12 +119,13 @@ object RecommendationEngine {
 
 /**
  * A model that combines a post with its engagement counts
+ * Implement the RENAMED interface
  */
 data class DiscoveryPostWithCounts(
-    val post: DiscoveryPost, 
-    val likeCount: Int,
-    val commentCount: Int
-)
+    override val post: DiscoveryPost, // DiscoveryPost now implements PostData
+    override val likeCount: Int,
+    override val commentCount: Int
+) : IPostWithEngagementData // Implement the interface
 
 /**
  * A model that combines a post with all metrics and its final score

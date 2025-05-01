@@ -38,6 +38,10 @@ import com.example.creativecommunity.models.CommentIdOnly
 import androidx.compose.ui.res.painterResource
 import com.example.creativecommunity.R
 import androidx.compose.foundation.Image
+import java.time.Instant // For timestamp parsing
+import java.time.format.DateTimeParseException
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sort
 
 // Data class to hold post with its like count for sorting
 data class PostWithLikes(
@@ -136,22 +140,57 @@ fun DiscoveryPage(navController: NavController) {
         coroutineScope.launch {
             isLoading = true
             try {
-                displayedPosts = when (sortOption) {
-                    "Recent" -> posts.sortedByDescending { it.created_at }
-                    "Most Liked" -> {
-                        val postsWithLikes = posts.map { post ->
-                            val likeCount = likeManager.getLikeCount(post.id)
-                            PostWithLikes(post, likeCount)
+                // Perform the actual sorting/processing on a background thread
+                val sortedResult = withContext(Dispatchers.Default) {
+                    when (sortOption) {
+                        "Recent" -> posts.sortedByDescending { it.created_at }
+                        "Most Liked" -> {
+                            val postsWithLikes = posts.map { post -> // post is DiscoveryPost here
+                                val likeCount = likeManager.getLikeCount(post.id) // This might be slow
+                                PostWithLikes(post, likeCount)
+                            }
+                            postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
                         }
-                        postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
+                        "Recommended" -> {
+                            // 1. Map (Like counts might be slow)
+                            val postsWithCounts = posts.map {
+                                DiscoveryPostWithCounts(
+                                    post = it,
+                                    likeCount = likeManager.getLikeCount(it.id),
+                                    commentCount = commentCounts[it.id] ?: 0
+                                )
+                            }
+                            // 2. Compute Engagement (Might be CPU intensive)
+                            val authorEngagement = RecommendationEngine.computeAuthorEngagement(postsWithCounts)
+                            // 3. Calculate Scores (Might be CPU intensive)
+                            val scoredPosts = postsWithCounts.map { postWithCounts ->
+                                val username = postWithCounts.post.user.username ?: ""
+                                val engagement = authorEngagement[username] ?: 0f
+                                val createdAtEpochMillis = try {
+                                    postWithCounts.post.created_at?.let { Instant.parse(it).toEpochMilli() } ?: System.currentTimeMillis()
+                                } catch (e: DateTimeParseException) {
+                                    Log.w("Recommendation", "Could not parse timestamp: ${postWithCounts.post.created_at}, using current time.")
+                                    System.currentTimeMillis()
+                                }
+                                val metrics = PostMetrics(
+                                    postId = postWithCounts.post.id,
+                                    likeCount = postWithCounts.likeCount,
+                                    commentCount = postWithCounts.commentCount,
+                                    authorEngagement = engagement,
+                                    createdAt = createdAtEpochMillis
+                                )
+                                val score = RecommendationEngine.score(metrics)
+                                ScoredPost(postWithCounts.post, metrics, score)
+                            }
+                            // 4. Sort by Score
+                            scoredPosts.sortedByDescending { it.score }.map { it.post }
+                        }
+                        "Random" -> posts.shuffled()
+                        else -> posts
                     }
-                    "Recommended" -> {
-                        // Placeholder for recommendation logic
-                        posts.sortedByDescending { it.created_at } // Default to recent
-                    }
-                    "Random" -> posts.shuffled(Random(System.currentTimeMillis()))
-                    else -> posts
-                }
+                 }
+                // Update the UI state back on the main thread
+                displayedPosts = sortedResult
             } catch (e: Exception) {
                 fetchError = "Failed to sort posts: ${e.message}"
                 Log.e("DiscoveryPage", "Sort error", e)
@@ -174,12 +213,49 @@ fun DiscoveryPage(navController: NavController) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Posts For You",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp, horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Posts For You",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Box {
+                        IconButton(onClick = { showSortDropdown = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = "Sort Posts",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showSortDropdown,
+                            onDismissRequest = { showSortDropdown = false }
+                        ) {
+                            val options = listOf("Recent", "Random", "Most Liked", "Recommended")
+                            options.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        if (selectedSortOption != option) {
+                                            selectedSortOption = option
+                                            sortPosts(option)
+                                        }
+                                        showSortDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
             // Posts List
             if (isLoading) {
@@ -200,7 +276,7 @@ fun DiscoveryPage(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    items(displayedPosts) { post ->
+                    items(displayedPosts, key = { post -> post.id }) { post ->
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()

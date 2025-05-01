@@ -56,13 +56,11 @@ import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.models.CommentIdOnly
 import com.example.creativecommunity.models.Post
+import com.example.creativecommunity.models.PostMetrics
+import com.example.creativecommunity.models.RecommendationEngine
 import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.ui.theme.HighlightRed
-import com.example.creativecommunity.ui.theme.OnBackgroundOffWhite
-import com.example.creativecommunity.ui.theme.SunsetOrange
 import com.example.creativecommunity.ui.theme.OnPrimaryWhite
-import com.example.creativecommunity.ui.theme.GradientStartOrangeRed
-import com.example.creativecommunity.ui.theme.GradientEndBlue
 import com.example.creativecommunity.ui.theme.PrimaryBlue
 import com.example.creativecommunity.utils.LikeManager
 import com.example.creativecommunity.utils.PromptRotation
@@ -75,6 +73,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.Instant
+import java.time.format.DateTimeParseException
+import com.example.creativecommunity.models.IPostData
+import com.example.creativecommunity.models.IPostWithEngagementData
 
 @Serializable
 data class Prompt(
@@ -86,14 +88,26 @@ data class FeedPost(
     val id: Int,
     @SerialName("image_url") val image_url: String,
     @SerialName("content") val content: String,
-    @SerialName("users") val user: UserInfo,
+    @SerialName("users") override val user: UserInfo,
     @SerialName("created_at") val created_at: String? = null
-)
+) : IPostData
 
 // Data class to hold post with its like count for sorting (same as in DiscoveryPage)
 data class FeedPostWithLikes(
     val post: FeedPost,
     val likeCount: Int
+)
+
+data class FeedPostWithCounts(
+    override val post: FeedPost,
+    override val likeCount: Int,
+    override val commentCount: Int
+) : IPostWithEngagementData
+
+data class ScoredFeedPost(
+    val post: FeedPost,
+    val metrics: PostMetrics,
+    val score: Float
 )
 
 @Composable
@@ -234,19 +248,57 @@ fun CategoryFeed(navController: NavController, category: String) {
         coroutineScope.launch {
             isLoading = true
             try {
-                displayedPosts = when (sortOption) {
-                    "Recent" -> posts.sortedByDescending { it.created_at }
-                    "Random" -> posts.shuffled() // ADDED Random sorting
-                    "Most Liked" -> { // RENAMED from Popular
-                        val postsWithLikes = posts.map { post ->
-                            val likeCount = likeManager.getLikeCount(post.id)
-                            FeedPostWithLikes(post, likeCount)
+                // Perform the actual sorting/processing on a background thread
+                val sortedResult = withContext(Dispatchers.Default) {
+                    when (sortOption) {
+                        "Recent" -> posts.sortedByDescending { it.created_at }
+                        "Random" -> posts.shuffled()
+                        "Most Liked" -> {
+                            val postsWithLikes = posts.map { post: FeedPost ->
+                                val likeCount = likeManager.getLikeCount(post.id) // This might be slow
+                                FeedPostWithLikes(post, likeCount)
+                            }
+                            postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
                         }
-                        postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
+                        "Recommended" -> {
+                            // 1. Map (Like counts might be slow)
+                            val postsWithCounts = posts.map { post: FeedPost ->
+                                FeedPostWithCounts(
+                                    post = post,
+                                    likeCount = likeManager.getLikeCount(post.id),
+                                    commentCount = commentCounts[post.id] ?: 0
+                                )
+                            }
+                            // 2. Compute Engagement (Might be CPU intensive)
+                            val authorEngagement = RecommendationEngine.computeAuthorEngagement(postsWithCounts)
+                            // 3. Calculate Scores (Might be CPU intensive)
+                            val scoredPosts = postsWithCounts.map { postWithCounts: FeedPostWithCounts ->
+                                val username = postWithCounts.post.user.username ?: ""
+                                val engagement = authorEngagement[username] ?: 0f
+                                val createdAtEpochMillis = try {
+                                    postWithCounts.post.created_at?.let { Instant.parse(it).toEpochMilli() } ?: System.currentTimeMillis()
+                                } catch (e: DateTimeParseException) {
+                                    Log.w("Recommendation", "Could not parse timestamp: ${postWithCounts.post.created_at}, using current time.")
+                                    System.currentTimeMillis()
+                                }
+                                val metrics = PostMetrics(
+                                    postId = postWithCounts.post.id,
+                                    likeCount = postWithCounts.likeCount,
+                                    commentCount = postWithCounts.commentCount,
+                                    authorEngagement = engagement,
+                                    createdAt = createdAtEpochMillis
+                                )
+                                val score = RecommendationEngine.score(metrics)
+                                ScoredFeedPost(postWithCounts.post, metrics, score)
+                            }
+                            // 4. Sort by Score
+                            scoredPosts.sortedByDescending { it.score }.map { it.post }
+                        }
+                        else -> posts
                     }
-                    // REMOVED Trending case
-                    else -> posts // Default fallback remains
                 }
+                // Update the UI state back on the main thread
+                displayedPosts = sortedResult
             } catch (e: Exception) {
                 fetchError = "Failed to sort posts: ${e.message}"
                 Log.e("CategoryFeed", "Sort error", e)
@@ -287,7 +339,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                     modifier = Modifier.weight(1f) // Allow text to take available space
                 )
 
-                // Sorting Button Box (keep existing structure)
+                // Sorting Button Box
                 Box { 
                     IconButton(onClick = { showSortDropdown = true }) {
                         Icon(
@@ -300,7 +352,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                         expanded = showSortDropdown,
                         onDismissRequest = { showSortDropdown = false }
                     ) {
-                         val options = listOf("Recent", "Random", "Most Liked")
+                         val options = listOf("Recent", "Random", "Most Liked", "Recommended")
                          options.forEach { option ->
                              DropdownMenuItem(
                                  text = { Text(option) },
@@ -313,7 +365,6 @@ fun CategoryFeed(navController: NavController, category: String) {
                                  }
                              )
                          }
-                         DropdownMenuItem(text = { Text("Recommended") }, onClick = {}, enabled = false)
                     }
                 }
             }
@@ -420,9 +471,8 @@ fun CategoryFeed(navController: NavController, category: String) {
                     // Keep Posts list
                     items(
                         items = displayedPosts, 
-                        key = { post -> post.id } // ADDED key for items
-                    ) { post ->
-                        // Box wrapping Post
+                        key = { post: FeedPost -> post.id }
+                    ) { post: FeedPost ->
                         Box(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -431,11 +481,11 @@ fun CategoryFeed(navController: NavController, category: String) {
                                 authorId = post.user.auth_id,
                                 postId = post.id,
                                 profileImage = post.user.profile_image ?: defaultProfileImages.random(),
-                                username = post.user.username,
+                                username = post.user.username ?: "User",
                                 postImage = post.image_url,
                                 caption = post.content,
-                                likeCount = 0, // Let Post composable fetch its own counts
-                                commentCount = commentCounts[post.id] ?: 0, // Use fetched comment count
+                                likeCount = 0,
+                                commentCount = commentCounts[post.id] ?: 0,
                                 onCommentClicked = { navController.navigate("individual_post/${post.id}") },
                                 onImageClick = { showPostImageDialog = true; selectedPostImageUrl = post.image_url }
                             )
