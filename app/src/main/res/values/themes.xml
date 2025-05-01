@@ -2,6 +2,6 @@
 <resources>
 
     <style name="Theme.CreativeCommunity" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@drawable/splash_layer</item>
+        <!-- <item name="android:windowBackground">@drawable/splash_layer</item> -->
     </style>
 </resources>

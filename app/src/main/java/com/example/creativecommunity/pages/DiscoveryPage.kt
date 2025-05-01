@@ -162,16 +162,6 @@ fun DiscoveryPage(navController: NavController) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isPhoneMode) {
-            Image(
-                painter = painterResource(id = R.drawable.splash_bg),
-                contentDescription = "Background Eye",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.18f },
-                contentScale = ContentScale.Crop
-            )
-        }
         Column(modifier = Modifier.fillMaxSize()) {
             // Header with opacity background
             Box(

@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.CommentIdOnly
 import com.example.creativecommunity.models.Post
 import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.utils.LikeManager
@@ -252,58 +254,45 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 
+    // Wrap Column and FAB in a Box for alignment
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isPhoneMode) {
-            Image(
-                painter = painterResource(id = R.drawable.splash_bg),
-                contentDescription = "Background Eye",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.18f },
-                contentScale = ContentScale.Crop
-            )
-        }
+        // The main content Column
         Column(modifier = Modifier.fillMaxSize()) {
-            // Back Button
-            TextButton(
-                onClick = { navController.navigateUp() },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text("← Back")
-            }
             // Prompt Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "This Week's Prompt",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    when {
-                        promptLoading -> Text("Loading prompt...", style = MaterialTheme.typography.bodySmall)
-                        promptError != null -> Text(promptError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        promptData == null -> Text("No active prompt for $category", style = MaterialTheme.typography.bodySmall)
-                        else -> {
-                            Text(
-                                text = promptData!!.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            if (!promptData!!.description.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(2.dp))
+            promptData?.let {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "This Week's Prompt",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        when {
+                            promptLoading -> Text("Loading prompt...", style = MaterialTheme.typography.bodySmall)
+                            promptError != null -> Text(promptError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            promptData == null -> Text("No active prompt for $category", style = MaterialTheme.typography.bodySmall)
+                            else -> {
                                 Text(
-                                    text = promptData!!.description!!,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = promptData!!.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
                                 )
+                                if (!promptData!!.description.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = promptData!!.description!!,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

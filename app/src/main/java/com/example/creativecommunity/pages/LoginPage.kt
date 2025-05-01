@@ -43,6 +43,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Brush
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -79,9 +81,17 @@ fun LoginPage(navController: NavController) {
     val buttonFontSize = if (isLandscape) 18.sp else 16.sp
     val textFieldFontSize = if (isLandscape) 18.sp else 16.sp
 
+    // Define gradient based on theme
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val gradientColor = if (isSystemInDarkTheme()) Color(0xFF2A2A2A) else Color(0xFFF0F0F0) // Slightly darker/lighter than surface
+    val gradientBrush = Brush.verticalGradient(
+        colors = listOf(gradientColor, surfaceColor)
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(gradientBrush) // Apply the gradient background
             .padding(horizontalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
