@@ -1,6 +1,7 @@
 package com.example.creativecommunity.pages
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +18,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,9 +28,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,20 +40,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.CommentIdOnly
 import com.example.creativecommunity.models.Post
 import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.utils.LikeManager
@@ -64,13 +64,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import com.example.creativecommunity.models.CommentIdOnly
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.compose.ui.res.painterResource
-import com.example.creativecommunity.R
-import androidx.compose.foundation.Image
 
 @Serializable
 data class Prompt(
@@ -255,50 +248,14 @@ fun CategoryFeed(navController: NavController, category: String) {
 
     // Wrap Column and FAB in a Box for alignment
     Box(modifier = Modifier.fillMaxSize()) {
-        // The main content Column
+        // The main content Column - NOW ONLY CONTAINS THE LAZYCOLUMN (and loading/error states)
         Column(modifier = Modifier.fillMaxSize()) {
-            // Prompt Card
-            promptData?.let {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "This Week's Prompt",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        when {
-                            promptLoading -> Text("Loading prompt...", style = MaterialTheme.typography.bodySmall)
-                            promptError != null -> Text(promptError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                            promptData == null -> Text("No active prompt for $category", style = MaterialTheme.typography.bodySmall)
-                            else -> {
-                                Text(
-                                    text = promptData!!.title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                if (!promptData!!.description.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = promptData!!.description!!,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            // Posts List
+            // REMOVE Prompt Card from here
+            // REMOVE Spacer from here
+            // REMOVE Sorting UI Row from here
+            // REMOVE Spacer from here
+
+            // Posts List Section (includes LazyColumn)
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -307,21 +264,140 @@ fun CategoryFeed(navController: NavController, category: String) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(fetchError!!, color = MaterialTheme.colorScheme.error)
                 }
-            } else if (displayedPosts.isEmpty()) {
+            } else if (displayedPosts.isEmpty() && promptData == null) { // Adjusted empty state condition slightly
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No posts yet in this category.", style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 LazyColumn(
                     state = listState,
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp), // Adjust spacing as needed
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp) // Add padding to LazyColumn itself
+                    // modifier = Modifier.padding(horizontal = 16.dp) // Remove padding here if using contentPadding
                 ) {
+                    // ADD Prompt Card as the first item
+                    item {
+                        promptData?.let {
+                            // Define the gradient using Secondary color
+                            val gradientBrush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.secondary,
+                                    MaterialTheme.colorScheme.primaryContainer
+                                )
+                            )
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    // .padding(horizontal = 16.dp, vertical = 8.dp), // Padding handled by LazyColumn contentPadding
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = CardDefaults.cardElevation(4.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .background(gradientBrush)
+                                        .padding(16.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) { // Row for Icon + Title
+                                        Icon(
+                                            imageVector = Icons.Outlined.Lightbulb,
+                                            contentDescription = "Prompt Icon",
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "This Week's Prompt",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    when {
+                                        promptLoading -> Text(
+                                            "Loading prompt...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                        )
+                                        promptError != null -> Text(
+                                            promptError!!,
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        promptData == null -> Text(
+                                            "No active prompt for $category",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                        )
+                                        else -> {
+                                            Text(
+                                                text = promptData!!.title,
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                            if (!promptData!!.description.isNullOrBlank()) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                // Emphasize the Description
+                                                Text(
+                                                    text = promptData!!.description!!,
+                                                    style = MaterialTheme.typography.bodyLarge, // INCREASED SIZE
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer // FULL OPACITY
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ADD Sorting UI as the second item
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                                // .padding(horizontal = 16.dp), // Padding handled by LazyColumn contentPadding
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Box { // Box to anchor the dropdown
+                                IconButton(onClick = { showSortDropdown = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sort,
+                                        contentDescription = "Sort Posts",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showSortDropdown,
+                                    onDismissRequest = { showSortDropdown = false }
+                                ) {
+                                    val options = listOf("Recent", "Random", "Most Liked")
+                                    options.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option) },
+                                            onClick = {
+                                                if (selectedSortOption != option) {
+                                                    selectedSortOption = option
+                                                    sortPosts(option) // Call the sorting logic
+                                                }
+                                                showSortDropdown = false
+                                            }
+                                        )
+                                    }
+                                    DropdownMenuItem(text = { Text("Recommended") }, onClick = {}, enabled = false)
+                                }
+                            }
+                        }
+                    }
+
+                    // Keep Posts list
                     items(displayedPosts) { post ->
+                        // Box wrapping Post - remove extra padding if handled by LazyColumn spacing/padding
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 10.dp, horizontal = 4.dp)
+                                // .padding(vertical = 10.dp, horizontal = 4.dp)
                         ) {
                             Post(
                                 navController = navController,
@@ -344,7 +420,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                 }
             }
         }
-        // Floating Action Button for New Post
+        // Floating Action Button remains outside the Column, anchored to the parent Box
         FloatingActionButton(
             onClick = { navController.navigate("new_post/$category") },
             containerColor = MaterialTheme.colorScheme.primary,
