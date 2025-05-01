@@ -43,6 +43,8 @@ import androidx.navigation.NavController
 // Import the new colors
 import com.example.creativecommunity.ui.theme.DeepAquaContainer
 import com.example.creativecommunity.ui.theme.OnDeepAquaContainer
+// Add graphicsLayer import
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 fun MainPage(navController: NavController) {
@@ -69,22 +71,25 @@ fun MainPage(navController: NavController) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 32.dp, bottom = 16.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
-                .padding(vertical = 16.dp)
+                .padding(top = 24.dp, bottom = 12.dp)
+                .graphicsLayer { shadowElevation = 4.dp.toPx() }
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                .padding(vertical = 12.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Welcome to Muse!",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Use Primary color
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = titleFontSize
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Dive into your creative community",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    // Use onSurface color
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), // Keep slight transparency
                     fontSize = subtitleFontSize,
                     textAlign = TextAlign.Center
                 )
