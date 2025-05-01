@@ -384,11 +384,13 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Button(
                                     onClick = {
-                                        showCommentBox = false
+                                        // Only cancel the reply, don't hide the box
+                                        // showCommentBox = false 
                                         submitError = null
                                         replyingToComment = null
                                     },
-                                    enabled = !isSubmitting
+                                    // Only enable when replying and not submitting
+                                    enabled = replyingToComment != null && !isSubmitting 
                                 ) {
                                     Text("Cancel")
                                 }
