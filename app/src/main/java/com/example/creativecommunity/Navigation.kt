@@ -1,5 +1,8 @@
 package com.example.creativecommunity
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +14,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.creativecommunity.components.BottomNavigationBar
 import com.example.creativecommunity.pages.AboutUsPage
@@ -32,12 +36,28 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
     val screenWidth = configuration.screenWidthDp
     val isWideScreen = screenWidth > 600
 
+    // Define common transitions
+    val fadeInSpec = tween<Float>(300)
+    val fadeOutSpec = tween<Float>(300)
+
     NavHost(navController = navController, startDestination = "login") {
-        composable("login") { 
+        composable(
+            "login",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { 
             LoginPage(navController) 
         }
         
-        composable("main") { 
+        composable(
+            "main",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
@@ -58,7 +78,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("discovery") { 
+        composable(
+            "discovery",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
@@ -79,7 +105,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("profile") { 
+        composable(
+            "profile",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
@@ -100,7 +132,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("saved_posts") { 
+        composable(
+            "saved_posts",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
@@ -121,7 +159,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("new_post/{category}") { backStackEntry ->
+        composable(
+            "new_post/{category}",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -143,7 +187,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("category_feed/{category}") { backStackEntry ->
+        composable(
+            "category_feed/{category}",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -165,8 +215,16 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("individual_post/{postId}") { backStackEntry ->
+        composable(
+            "individual_post/{postId}",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { backStackEntry ->
             val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            val currentDestination = navController.currentBackStackEntryAsState().value?.destination
+
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
@@ -177,7 +235,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             } else {
                 Scaffold(
                     bottomBar = {
-                        BottomNavigationBar(navController = navController)
+                        if (currentDestination?.route?.startsWith("individual_post/") != true) {
+                            BottomNavigationBar(navController = navController)
+                        }
                     }
                 ) { paddingValues ->
                     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
@@ -187,7 +247,14 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("my_posts") { 
+        composable(
+            "my_posts",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { 
+            val currentDestination = navController.currentBackStackEntryAsState().value?.destination
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     BottomNavigationBar(navController = navController)
@@ -208,7 +275,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("view_profile/{userId}") { backStackEntry ->
+        composable(
+            "view_profile/{userId}",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -230,7 +303,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
 
-        composable("user_posts/{userId}") { backStackEntry ->
+        composable(
+            "user_posts/{userId}",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -252,7 +331,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             }
         }
         
-        composable("about_us") {
+        composable(
+            "about_us",
+            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+        ) {
             AboutUsPage(navController)
         }
     }
