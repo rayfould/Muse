@@ -459,6 +459,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                                                 Text(
                                                     text = promptData!!.description!!,
                                                     style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.SemiBold,
                                                     color = OnPrimaryWhite // Use WHITE for contrast
                                                 )
                                             }
