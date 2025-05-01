@@ -1,6 +1,7 @@
 package com.example.creativecommunity.pages
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -13,12 +14,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,7 +32,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -36,15 +43,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.ui.theme.DeepAquaContainer
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.ui.graphics.Brush
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -59,21 +62,19 @@ fun LoginPage(navController: NavController) {
     var showTitleWithForm by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(2000) // Initial delay before showing title
+        delay(2000)
         showTitle = true
-        delay(2000) // Show initial title for 2 seconds
+        delay(2000)
         showTitle = false
-        delay(1000) // Brief pause before showing form
+        delay(1000)
         showForm = true
         showTitleWithForm = true
     }
 
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp
-    // for screen sizes - different values for different screens; don't want super stretched UI
     val isLandscape = screenWidth > 600
-    
-    // DIFFERENT VALUES FOR DIFFERENT SCREN SIZES
+
     val maxFormWidth = if (isLandscape) 500.dp else screenWidth.dp
     val horizontalPadding = if (isLandscape) 32.dp else 20.dp
     val verticalPadding = if (isLandscape) 24.dp else 16.dp
@@ -81,17 +82,17 @@ fun LoginPage(navController: NavController) {
     val buttonFontSize = if (isLandscape) 18.sp else 16.sp
     val textFieldFontSize = if (isLandscape) 18.sp else 16.sp
 
-    // Define gradient based on theme
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val gradientColor = if (isSystemInDarkTheme()) Color(0xFF2A2A2A) else Color(0xFFF0F0F0) // Slightly darker/lighter than surface
     val gradientBrush = Brush.verticalGradient(
-        colors = listOf(gradientColor, surfaceColor)
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            DeepAquaContainer
+        )
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(gradientBrush) // Apply the gradient background
+            .background(gradientBrush)
             .padding(horizontalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -105,7 +106,7 @@ fun LoginPage(navController: NavController) {
                 text = "Muse",
                 fontSize = titleFontSize,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
         }
@@ -119,7 +120,6 @@ fun LoginPage(navController: NavController) {
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .widthIn(max = maxFormWidth)
-                    .background(Color.Black.copy(alpha = 0.6f))
                     .padding(verticalPadding)
             ) {
                 AnimatedVisibility(
@@ -131,34 +131,62 @@ fun LoginPage(navController: NavController) {
                         text = "Muse",
                         fontSize = titleFontSize,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 32.dp)
                     )
                 }
                 TextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email", fontSize = textFieldFontSize) },
+                    label = { Text("Email") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = textFieldFontSize)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    ),
+                    textStyle = TextStyle(fontSize = textFieldFontSize)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password", fontSize = textFieldFontSize) },
+                    label = { Text("Password") },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = textFieldFontSize)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    ),
+                    textStyle = TextStyle(fontSize = textFieldFontSize)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
+                Button(
                     onClick = {
                         isLoading = true
                         scope.launch {
@@ -198,20 +226,22 @@ fun LoginPage(navController: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White,
-                        contentColor = Color.Black
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                     )
                 ) {
                     Text(
                         if (isSignup) "Sign Up" else "Login",
-                        color = Color.Black,
                         fontSize = buttonFontSize
                     )
                 }
                 if (isLoading) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = { isSignup = !isSignup }) {
@@ -219,15 +249,17 @@ fun LoginPage(navController: NavController) {
                         text = if (isSignup) "Already have an account? Login" else "Need an account? Sign Up",
                         fontSize = textFieldFontSize,
                         fontWeight = FontWeight.Normal,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 message?.let {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         it,
-                        color = if (it.contains("failed")) MaterialTheme.colorScheme.error else Color.Black,
-                        fontSize = textFieldFontSize
+                        color = if (it.contains("failed", ignoreCase = true)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = textFieldFontSize,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
             }
