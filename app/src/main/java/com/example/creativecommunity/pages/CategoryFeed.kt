@@ -229,24 +229,23 @@ fun CategoryFeed(navController: NavController, category: String) {
         }
     }
 
-    // Sorting logic (Fix Recent sort, use direct logic)
+    // Sorting logic - FIXED
     val sortPosts: (String) -> Unit = { sortOption ->
         coroutineScope.launch {
             isLoading = true
             try {
                 displayedPosts = when (sortOption) {
                     "Recent" -> posts.sortedByDescending { it.created_at }
-                    "Popular" -> {
+                    "Random" -> posts.shuffled() // ADDED Random sorting
+                    "Most Liked" -> { // RENAMED from Popular
                         val postsWithLikes = posts.map { post ->
                             val likeCount = likeManager.getLikeCount(post.id)
                             FeedPostWithLikes(post, likeCount)
                         }
                         postsWithLikes.sortedByDescending { it.likeCount }.map { it.post }
                     }
-                    "Trending" -> {
-                        posts.sortedByDescending { it.created_at }
-                    }
-                    else -> posts
+                    // REMOVED Trending case
+                    else -> posts // Default fallback remains
                 }
             } catch (e: Exception) {
                 fetchError = "Failed to sort posts: ${e.message}"
@@ -418,13 +417,14 @@ fun CategoryFeed(navController: NavController, category: String) {
                         }
                     }
 
-                    // Posts list items (existing code)
-                    items(displayedPosts) { post ->
-                        // Box wrapping Post - remove extra padding if handled by LazyColumn spacing/padding
+                    // Keep Posts list
+                    items(
+                        items = displayedPosts, 
+                        key = { post -> post.id } // ADDED key for items
+                    ) { post ->
+                        // Box wrapping Post
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                // .padding(vertical = 10.dp, horizontal = 4.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Post(
                                 navController = navController,
