@@ -14,13 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -30,7 +30,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -129,7 +128,7 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
     val postIdInt = postId?.toIntOrNull()
 
     var replyingToComment by remember { mutableStateOf<PostComment?>(null) }
-    var showCommentBox by remember { mutableStateOf(false) }
+    var showCommentBox by remember { mutableStateOf(true) }
 
     // New state variables for edit/delete functionality
     var showMenu by remember { mutableStateOf(false) }
@@ -327,7 +326,6 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                                         caption = postDetails!!.content ?: "",
                                         likeCount = 0,
                                         commentCount = comments.size,
-                                        onCommentClicked = { showCommentBox = !showCommentBox },
                                         onImageClick = { }
                                     )
                                 }
@@ -359,99 +357,95 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                                     )
                                 }
                             }
-                            // Comment input field and submit button (toggleable)
-                            if (currentAuthId != null && postIdInt != null && showCommentBox) {
-                                item {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp)
-                                            .widthIn(max = maxContentWidth),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        if (replyingToComment != null) {
-                                            Text("Replying to @${replyingToComment!!.users.username}", color = MaterialTheme.colorScheme.primary)
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                        }
-                                        OutlinedTextField(
-                                            value = commentInput,
-                                            onValueChange = { commentInput = it },
-                                            label = { Text("Add a comment...") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = !isSubmitting
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Button(
-                                                onClick = {
-                                                    showCommentBox = false
-                                                    submitError = null
-                                                    replyingToComment = null
-                                                },
-                                                enabled = !isSubmitting
-                                            ) {
-                                                Text("Cancel")
-                                            }
-                                            Button(
-                                                onClick = {
-                                                    if (commentInput.isNotBlank()) {
-                                                        isSubmitting = true
-                                                        submitError = null
-                                                        coroutineScope.launch {
-                                                            try {
-                                                                // Look up numeric user_id from auth_id
-                                                                val userId = withContext(Dispatchers.IO) {
-                                                                    val response = SupabaseClient.client.postgrest["users"]
-                                                                        .select { filter { eq("auth_id", currentAuthId) } }
-                                                                    val users = response.decodeList<com.example.creativecommunity.models.UserInfo>()
-                                                                    users.firstOrNull()?.id
-                                                                }
-                                                                if (userId != null) {
-                                                                    // Insert comment
-                                                                    withContext(Dispatchers.IO) {
-                                                                        SupabaseClient.client.postgrest["comments"].insert(
-                                                                            NewComment(
-                                                                                user_id = userId,
-                                                                                post_id = postIdInt,
-                                                                                content = commentInput,
-                                                                                parent_id = replyingToComment?.id // Set parent_id if replying
-                                                                            )
-                                                                        )
-                                                                    }
-                                                                    // Refresh comments
-                                                                    val commentsResult = withContext(Dispatchers.IO) {
-                                                                        SupabaseClient.client.postgrest.from("comments")
-                                                                            .select(Columns.raw("id, content, parent_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
-                                                                                filter { eq("post_id", postIdInt) }
-                                                                                order("created_at", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
-                                                                            }
-                                                                            .decodeList<PostComment>()
-                                                                    }
-                                                                    comments = commentsResult
-                                                                    commentInput = ""
-                                                                    replyingToComment = null
-                                                                    showCommentBox = false
-                                                                } else {
-                                                                    submitError = "Could not find your user account."
-                                                                }
-                                                            } catch (e: Exception) {
-                                                                submitError = "Failed to submit comment: ${e.message}"
-                                                            } finally {
-                                                                isSubmitting = false
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                enabled = !isSubmitting && commentInput.isNotBlank(),
-                                            ) {
-                                                Text(if (isSubmitting) "Posting..." else "Post")
-                                            }
-                                        }
-                                        if (submitError != null) {
-                                            Text(submitError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
-                                        }
-                                    }
+                        }
+                    }
+
+                    if (currentAuthId != null && postIdInt != null && showCommentBox) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp) // Use horizontal padding for consistency
+                                .widthIn(max = maxContentWidth) // Constrain width like the LazyColumn content
+                                .align(Alignment.CenterHorizontally), // Center the input area horizontally within the parent Column
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            if (replyingToComment != null) {
+                                Text("Replying to @${replyingToComment!!.users.username}", color = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            OutlinedTextField(
+                                value = commentInput,
+                                onValueChange = { commentInput = it },
+                                label = { Text("Add a comment...") },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !isSubmitting
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Button(
+                                    onClick = {
+                                        showCommentBox = false
+                                        submitError = null
+                                        replyingToComment = null
+                                    },
+                                    enabled = !isSubmitting
+                                ) {
+                                    Text("Cancel")
                                 }
+                                Button(
+                                    onClick = {
+                                        if (commentInput.isNotBlank()) {
+                                            isSubmitting = true
+                                            submitError = null
+                                            coroutineScope.launch {
+                                                try {
+                                                    val userId = withContext(Dispatchers.IO) {
+                                                        val response = SupabaseClient.client.postgrest["users"]
+                                                            .select { filter { eq("auth_id", currentAuthId) } }
+                                                        val users = response.decodeList<com.example.creativecommunity.models.UserInfo>()
+                                                        users.firstOrNull()?.id
+                                                    }
+                                                    if (userId != null) {
+                                                        withContext(Dispatchers.IO) {
+                                                            SupabaseClient.client.postgrest["comments"].insert(
+                                                                NewComment(
+                                                                    user_id = userId,
+                                                                    post_id = postIdInt,
+                                                                    content = commentInput,
+                                                                    parent_id = replyingToComment?.id
+                                                                )
+                                                            )
+                                                        }
+                                                        val commentsResult = withContext(Dispatchers.IO) {
+                                                            SupabaseClient.client.postgrest.from("comments")
+                                                                .select(Columns.raw("id, content, parent_id, users!inner(id, username, email, profile_image, bio, auth_id)")) {
+                                                                    filter { eq("post_id", postIdInt) }
+                                                                    order("created_at", io.github.jan.supabase.postgrest.query.Order.ASCENDING)
+                                                                }
+                                                                .decodeList<PostComment>()
+                                                        }
+                                                        comments = commentsResult
+                                                        commentInput = ""
+                                                        replyingToComment = null
+                                                        showCommentBox = false // Optionally hide after successful post
+                                                    } else {
+                                                        submitError = "Could not find your user account."
+                                                    }
+                                                } catch (e: Exception) {
+                                                    submitError = "Failed to submit comment: ${e.message}"
+                                                } finally {
+                                                    isSubmitting = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                    enabled = !isSubmitting && commentInput.isNotBlank(),
+                                ) {
+                                    Text(if (isSubmitting) "Posting..." else "Post")
+                                }
+                            }
+                            if (submitError != null) {
+                                Text(submitError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
                             }
                         }
                     }
