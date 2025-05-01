@@ -62,6 +62,7 @@ import com.example.creativecommunity.models.UserInfo
 import com.example.creativecommunity.ui.theme.HighlightRed
 import com.example.creativecommunity.ui.theme.OnPrimaryWhite
 import com.example.creativecommunity.ui.theme.PrimaryBlue
+import com.example.creativecommunity.ui.theme.DeepAquaContainer
 import com.example.creativecommunity.utils.LikeManager
 import com.example.creativecommunity.utils.PromptRotation
 import com.example.creativecommunity.utils.PromptWithDates
@@ -397,11 +398,11 @@ fun CategoryFeed(navController: NavController, category: String) {
                             // Define HORIZONTAL gradient using Theme Primary Blue -> Highlight Red
                             val gradientBrush = Brush.linearGradient(
                                 colors = listOf(
-                                    PrimaryBlue,   // Start Theme Primary Blue
-                                    HighlightRed   // End Highlight Red
+                                    MaterialTheme.colorScheme.primaryContainer, // Start Muted Blue
+                                    DeepAquaContainer                           // End Muted Teal
                                 ),
-                                start = Offset.Zero, // Left
-                                end = Offset(Float.POSITIVE_INFINITY, 0f) // Right
+                                start = Offset.Zero, // Top-Left
+                                end = Offset.Infinite // Bottom-Right (represents diagonal)
                             )
                             Card(
                                 modifier = Modifier
