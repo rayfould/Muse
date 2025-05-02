@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Dark Theme specific definitions -->
     <style name="Theme.CreativeCommunity" parent="android:Theme.Material.NoActionBar">
         <!-- Set the window background explicitly to the dark navy color -->
         <item name="android:windowBackground">@color/background_navy</item>
@@ -9,4 +9,4 @@
         <!-- Ensure navigation bar icons are light (if applicable) -->
         <item name="android:windowLightNavigationBar">false</item>
     </style>
-</resources>
+</resources> 
