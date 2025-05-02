@@ -3,8 +3,6 @@ package com.example.creativecommunity
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
@@ -12,14 +10,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.creativecommunity.components.BottomNavigationBar
 import com.example.creativecommunity.pages.AboutUsPage
 import com.example.creativecommunity.pages.CategoryFeed
@@ -287,29 +290,40 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         }
         
         composable(
-            "view_profile/{userId}",
+            route = "view_profile/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.StringType }),
             enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
             exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
             popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
             popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            if (isWideScreen) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    BottomNavigationBar(navController = navController)
-                    Box(modifier = Modifier.weight(1f)) {
-                        ViewProfilePage(navController = navController, userId = userId)
+            val userId = backStackEntry.arguments?.getString("userId")
+            val currentDestination = navController.currentBackStackEntryAsState().value?.destination
+
+            if (userId != null) {
+                if (isWideScreen) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        BottomNavigationBar(navController = navController)
+                        Box(modifier = Modifier.weight(1f)) {
+                            ViewProfilePage(navController = navController, userId = userId)
+                        }
+                    }
+                } else {
+                    Scaffold(
+                        bottomBar = {
+                            if (currentDestination?.route?.startsWith("view_profile/") != true) {
+                                BottomNavigationBar(navController = navController)
+                            }
+                        }
+                    ) { paddingValues ->
+                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                            ViewProfilePage(navController = navController, userId = userId)
+                        }
                     }
                 }
             } else {
-                Scaffold(
-                    bottomBar = {
-                        BottomNavigationBar(navController = navController)
-                    }
-                ) { paddingValues ->
-                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                        ViewProfilePage(navController = navController, userId = userId)
-                    }
+                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("Error: User ID is required.")
                 }
             }
         }

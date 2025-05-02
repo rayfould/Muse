@@ -317,7 +317,7 @@ fun Post(
     val navigateToProfile = {
         // Prevent navigation if authorId is missing (should not happen ideally)
         if (authorId.isNotEmpty()) {
-            navController.navigate("user/$authorId")
+            navController.navigate("view_profile/$authorId")
         } else {
             Log.w("PostComposable", "Attempted to navigate to profile but authorId is empty.")
         }
@@ -357,9 +357,12 @@ fun Post(
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = username,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.clickable { 
+                        Log.d("Navigation", "Navigating to profile for user: $authorId")
+                        // Corrected navigation call:
+                        navController.navigate("view_profile/$authorId") 
+                    }
                 )
             }
 

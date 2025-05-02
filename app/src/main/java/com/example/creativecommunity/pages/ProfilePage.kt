@@ -7,35 +7,22 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -67,10 +55,15 @@ import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.TextFieldDefaults
+import androidx.compose.ui.unit.Dp
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfilePage(navController: NavController) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -318,6 +311,7 @@ fun ProfilePage(navController: NavController) {
     }
 
     // Add a new composable for the badge board
+    @OptIn(ExperimentalLayoutApi::class)
     @Composable
     fun BadgeBoard(badges: List<String>) {
         Surface(
@@ -327,9 +321,10 @@ fun ProfilePage(navController: NavController) {
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            Row(
+            FlowRow(
                 modifier = Modifier.padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 badges.forEach { badge ->
                     Text(
@@ -341,455 +336,423 @@ fun ProfilePage(navController: NavController) {
         }
     }
 
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)),
-        color = Color.Transparent,
-        shadowElevation = 0.dp,
-        shape = RoundedCornerShape(0.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            when {
-                isLoading -> {
-                    CircularProgressIndicator()
-                }
-                error != null -> {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                userProfile != null -> {
-                    // Profile Picture with Edit Button
-                    BoxWithConstraints(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val buttonOffset = maxWidth * 0.25f  // Calculate 15% of screen width for button offset
-                        
-                        // Profile Picture Container
-                        Box {
-                            AsyncImage(
-                                model = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
-                                contentDescription = "Profile Picture",
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .clickable { showPfpDialog = true },
-                                contentScale = ContentScale.Crop
-                            )
-                            if (isUploadingPfp) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .size(120.dp)
-                                        .align(Alignment.Center)
-                                )
-                            }
-                        }
-                        
-                        // Edit Button (positioned absolutely)
-                        IconButton(
-                            onClick = { imagePickerLauncher.launch("image/*") },
-                            enabled = !isUploadingPfp,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = buttonOffset)  // Use calculated offset
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Profile Picture"
-                            )
-                        }
-                    }
+        when {
+            isLoading -> {
+                CircularProgressIndicator()
+            }
+            error != null -> {
+                Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            userProfile != null -> {
+                // Use BoxWithConstraints to determine layout based on width
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val breakpoint = 600.dp
+                    val isWideScreen = maxWidth >= breakpoint
 
-                    // Profile Picture Expansion Dialog
-                    if (showPfpDialog) {
-                        Dialog(onDismissRequest = { showPfpDialog = false }) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                AsyncImage(
-                                    model = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
-                                    contentDescription = "Enlarged profile picture",
-                                    modifier = Modifier
-                                        .size(500.dp)
-                                        .clickable { showPfpDialog = false }
-                                )
-                            }
-                        }
-                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-                    // Email Change Dialog
-                    if (showEmailDialog) {
-                        // Fetch current email when dialog opens
-                        LaunchedEffect(Unit) {
-                            try {
-                                val user = SupabaseClient.client.auth.retrieveUserForCurrentSession()
-                                currentEmail = user.email ?: ""
-                            } catch (e: Exception) {
-                                Log.e("ProfilePage", "Error fetching current email: ${e.message}", e)
-                                currentEmail = ""
-                            }
-                        }
-                        
-                        Dialog(onDismissRequest = { 
-                            showEmailDialog = false
-                            newEmail = ""
-                            confirmEmail = ""
-                            emailChangeError = null
-                        }) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                                    .padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        if (isWideScreen) {
+                            // Wide Screen Layout: Row for PFP/Info
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
                             ) {
-                                Text(
-                                    text = "Change Email",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-                                
-                                // Current email display
+                                // Left side: Profile Picture
+                                Box(
+                                    modifier = Modifier
+                                        .padding(end = 16.dp)
+                                        .size(120.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    ProfilePictureSection(
+                                        profileImageUrl = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
+                                        isUploading = isUploadingPfp,
+                                        onPfpClick = { showPfpDialog = true },
+                                        onEditClick = { imagePickerLauncher.launch("image/*") }
+                                    )
+                                }
+
+                                // Right side: Username & Bio Fields in a Column
                                 Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                            RoundedCornerShape(4.dp)
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    // Username
+                                    OutlinedTextField(
+                                        value = editedUsername,
+                                        onValueChange = { editedUsername = it },
+                                        label = { Text("Username") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                                            textColor = MaterialTheme.colorScheme.onSurface,
+                                            cursorColor = MaterialTheme.colorScheme.primary,
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
-                                        .padding(12.dp),
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    Text(
-                                        text = "Current email:",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Text(
-                                        text = currentEmail,
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                                    // Bio
+                                    OutlinedTextField(
+                                        value = editedBio,
+                                        onValueChange = { editedBio = it },
+                                        label = { Text("Bio") },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 120.dp),
+                                        minLines = 3,
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                                            textColor = MaterialTheme.colorScheme.onSurface,
+                                            cursorColor = MaterialTheme.colorScheme.primary,
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
                                     )
-                                }
-                                
-                                OutlinedTextField(
-                                    value = newEmail,
-                                    onValueChange = { 
-                                        newEmail = it
-                                        emailChangeError = null 
-                                    },
-                                    label = { Text("New Email Address") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    isError = emailChangeError != null
-                                )
-                                
-                                Spacer(modifier = Modifier.height(12.dp))
-                                
-                                OutlinedTextField(
-                                    value = confirmEmail,
-                                    onValueChange = { 
-                                        confirmEmail = it
-                                        emailChangeError = null 
-                                    },
-                                    label = { Text("Confirm Email Address") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    isError = emailChangeError != null
-                                )
-                                
-                                if (emailChangeError != null) {
-                                    Text(
-                                        text = emailChangeError!!,
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    TextButton(
-                                        onClick = { 
-                                            showEmailDialog = false
-                                            newEmail = ""
-                                            confirmEmail = ""
-                                            emailChangeError = null
-                                        }
-                                    ) {
-                                        Text("Cancel")
-                                    }
-                                    
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    
-                                    Button(
-                                        onClick = {
-                                            if (newEmail.isBlank()) {
-                                                emailChangeError = "Email cannot be empty"
-                                                return@Button
-                                            }
-                                            if (confirmEmail.isBlank()) {
-                                                emailChangeError = "Please confirm your email"
-                                                return@Button
-                                            }
-                                            if (newEmail != confirmEmail) {
-                                                emailChangeError = "Email addresses don't match"
-                                                return@Button
-                                            }
-                                            // Debug log for email values
-                                            Log.d("ProfilePage", "Update button clicked. newEmail='$newEmail', confirmEmail='$confirmEmail'")
-                                            updateEmail(newEmail)
-                                        },
-                                        enabled = !isEmailChanging
-                                    ) {
-                                        if (isEmailChanging) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                                strokeWidth = 2.dp
-                                            )
-                                        } else {
-                                            Text("Update")
-                                        }
-                                    }
                                 }
                             }
-                        }
-                    }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            // Badge Board (always full width below the Row or PFP)
+                            BadgeBoard(badges = badges)
 
-                    // Password Change Dialog
-                    if (showPasswordDialog) {
-                        Dialog(onDismissRequest = {
-                            showPasswordDialog = false
-                            newPassword = ""
-                            confirmPassword = ""
-                            passwordChangeError = null
-                        }) {
-                            Column(
+
+                        } else {
+                            // Narrow Screen Layout: Original Column layout
+                            // Profile Picture with Edit Button
+                            Box(
+                                modifier = Modifier.size(140.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ProfilePictureSection(
+                                    profileImageUrl = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
+                                    isUploading = isUploadingPfp,
+                                    onPfpClick = { showPfpDialog = true },
+                                    onEditClick = { imagePickerLauncher.launch("image/*") }
+                                )
+                            }
+
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            // Badge Board (always full width below the Row or PFP)
+                            BadgeBoard(badges = badges)
+                            // Username
+                            OutlinedTextField(
+                                value = editedUsername,
+                                onValueChange = {
+                                    editedUsername = it
+                                },
+                                label = { Text("Username") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    textColor = MaterialTheme.colorScheme.onSurface,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Bio
+                            OutlinedTextField(
+                                value = editedBio,
+                                onValueChange = {
+                                    editedBio = it
+                                },
+                                label = { Text("Bio") },
                                 modifier = Modifier
-                                    .padding(16.dp)
                                     .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                                    .padding(16.dp),
+                                    .height(120.dp),
+                                minLines = 3,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = TextFieldDefaults.outlinedTextFieldColors(
+                                    textColor = MaterialTheme.colorScheme.onSurface,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            )
+                        }
+
+                        // Common elements below PFP/Info/Badges section
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // Settings Buttons
+                        if (isWideScreen) {
+                            // Wide Screen: Use FlowRow for buttons
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                maxItemsInEachRow = 3 // Example: Limit items per row for better structure
+                            ) {
+                                SettingsButtons(
+                                    navController,
+                                    showEmailDialog = { showEmailDialog = it },
+                                    showPasswordDialog = { showPasswordDialog = it }
+                                )
+                            }
+                        } else {
+                            // Narrow Screen: Use Column
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(text = "Change Password", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
-                                
-                                OutlinedTextField(
-                                    value = newPassword,
-                                    onValueChange = { newPassword = it; passwordChangeError = null },
-                                    label = { Text("New Password") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    visualTransformation = PasswordVisualTransformation(),
-                                    isError = passwordChangeError != null
+                                SettingsButtons(
+                                    navController,
+                                    showEmailDialog = { showEmailDialog = it },
+                                    showPasswordDialog = { showPasswordDialog = it }
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                OutlinedTextField(
-                                    value = confirmPassword,
-                                    onValueChange = { confirmPassword = it; passwordChangeError = null },
-                                    label = { Text("Confirm Password") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    visualTransformation = PasswordVisualTransformation(),
-                                    isError = passwordChangeError != null
-                                )
-                                if (passwordChangeError != null) {
-                                    Text(text = passwordChangeError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                    TextButton(onClick = { showPasswordDialog = false; newPassword = ""; confirmPassword = ""; passwordChangeError = null }) {
-                                        Text("Cancel")
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Button(onClick = {
-                                        if (newPassword.isBlank()) { passwordChangeError = "Password cannot be empty"; return@Button }
-                                        if (confirmPassword.isBlank()) { passwordChangeError = "Please confirm your password"; return@Button }
-                                        if (newPassword != confirmPassword) { passwordChangeError = "Passwords don't match"; return@Button }
-                                        updatePassword(newPassword)
-                                    }, enabled = !isPasswordChanging) {
-                                        if (isPasswordChanging) {
-                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                                        } else {
-                                            Text("Update")
-                                        }
-                                    }
-                                }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Badge Board
-                    BadgeBoard(badges = badges)
-
-                    // Username
-                    OutlinedTextField(
-                        value = editedUsername,
-                        onValueChange = { 
-                            editedUsername = it
-                        },
-                        label = { Text("Username") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Bio
-                    OutlinedTextField(
-                        value = editedBio,
-                        onValueChange = { 
-                            editedBio = it
-                        },
-                        label = { Text("Bio") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        minLines = 3
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Settings Buttons
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Button(
-                            onClick = { showEmailDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            Icon(Icons.Default.Email, contentDescription = "Change Email", modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Change Email")
-                        }
-
-                        Button(
-                            onClick = { showPasswordDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            Icon(Icons.Default.Lock, contentDescription = "Change Password", modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Change Password")
-                        }
-
-                        Button(
-                            onClick = { navController.navigate("about_us") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "About Us",
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("About Us")
-                        }
-                        
-                        // Saved Posts button
-                        Button(
-                            onClick = { navController.navigate("saved_posts") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            Text(
-                                text = "\uD83C\uDF1F Saved Posts",
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        
-                        // My Posts button
-                        Button(
-                            onClick = { navController.navigate("my_posts") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            Text(
-                                text = "📝 My Posts",
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp)) // Adjusted spacer
 
                         // Logout Button
                         Button(
                             onClick = {
                                 scope.launch {
                                     SupabaseClient.client.auth.signOut()
-                                    navController.navigate("login") { // Navigate to login after sign out
+                                    navController.navigate("login") { 
                                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     }
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colorScheme.error)
                         ) {
-                            Text("Logout")
-                        }
-                    }
-
-                    // Save Changes Button (only shown when there are changes)
-                    if (hasChanges) {
-                        Button(
-                            onClick = { saveChanges() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            enabled = !isSaving
-                        ) {
-                            if (isSaving) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            } else {
-                                Text("Save Changes")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Logout", style = MaterialTheme.typography.labelLarge)
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Save Changes Button (only shown when there are changes)
+                        if (hasChanges) {
+                            Button(
+                                onClick = { saveChanges() },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                enabled = !isSaving
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(), 
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (isSaving) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    } else {
+                                        Text("Save Changes", style = MaterialTheme.typography.labelLarge)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
+        }
+    }
+}
+
+// Shared composable for the main settings buttons
+@Composable
+private fun SettingsButtons(
+    navController: NavController,
+    showEmailDialog: (Boolean) -> Unit,
+    showPasswordDialog: (Boolean) -> Unit
+) {
+    val buttonWidth = 180.dp // Define a common width
+
+    Button(
+        onClick = { showEmailDialog(true) },
+        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        // Wrap content in Row for centering
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Email, contentDescription = "Change Email", modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Change Email", style = MaterialTheme.typography.labelLarge)
+        }
+    }
+
+    Button(
+        onClick = { showPasswordDialog(true) },
+        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        // Wrap content in Row for centering
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Lock, contentDescription = "Change Password", modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Change Password", style = MaterialTheme.typography.labelLarge)
+        }
+    }
+
+    Button(
+        onClick = { navController.navigate("about_us") },
+        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        // Wrap content in Row for centering
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "About Us",
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("About Us", style = MaterialTheme.typography.labelLarge)
+        }
+    }
+
+    // Saved Posts button
+    Button(
+        onClick = { navController.navigate("saved_posts") },
+        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        // Wrap content in Row for centering
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "\uD83C\uDF1F Saved Posts",
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
+    }
+
+    // My Posts button
+    Button(
+        onClick = { navController.navigate("my_posts") },
+        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        // Wrap content in Row for centering
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "📝 My Posts",
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
+    }
+}
+
+// Extracted composable for Profile Picture and Edit Button
+@Composable
+private fun ProfilePictureSection(
+    profileImageUrl: String,
+    isUploading: Boolean,
+    onPfpClick: () -> Unit,
+    onEditClick: () -> Unit
+) {
+    Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.size(120.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = profileImageUrl,
+                contentDescription = "Profile Picture",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .clickable(onClick = onPfpClick),
+                contentScale = ContentScale.Crop
+            )
+            if (isUploading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .align(Alignment.Center)
+                )
+            }
+        }
+        IconButton(
+            onClick = onEditClick,
+            enabled = !isUploading,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (10).dp, y = (10).dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), CircleShape)
+                .size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Edit Profile Picture",
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 } 
