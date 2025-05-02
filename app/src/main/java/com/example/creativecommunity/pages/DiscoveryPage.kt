@@ -55,6 +55,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -154,13 +155,15 @@ fun DiscoveryPage(navController: NavController) {
 
     // Sorting logic moved inside Composable
     val sortPosts: (String) -> Unit = { sortOption ->
-        coroutineScope.launch {
-            isLoading = true
+        coroutineScope.launch { 
+            isLoading = true // Ensure isLoading is true before starting any sort logic
             try {
-                // Perform the actual sorting/processing on a background thread
                 val sortedResult = withContext(Dispatchers.Default) {
                     when (sortOption) {
-                        "Recent" -> posts.sortedByDescending { it.created_at }
+                        "Recent" -> {
+                            delay(50) // Small delay for visual consistency
+                            posts.sortedByDescending { it.created_at }
+                        }
                         "Most Liked" -> {
                             val postsWithLikes = posts.map { post -> // post is DiscoveryPost here
                                 val likeCount = likeManager.getLikeCount(post.id) // This might be slow
@@ -202,11 +205,16 @@ fun DiscoveryPage(navController: NavController) {
                             // 4. Sort by Score
                             scoredPosts.sortedByDescending { it.score }.map { it.post }
                         }
-                        "Random" -> posts.shuffled()
-                        else -> posts
+                        "Random" -> {
+                            delay(50) // Small delay for visual consistency
+                            posts.shuffled()
+                        }
+                        else -> {
+                            delay(50) // Small delay for visual consistency
+                            posts
+                        }
                     }
                  }
-                // Update the UI state back on the main thread
                 displayedPosts = sortedResult
             } catch (e: Exception) {
                 fetchError = "Failed to sort posts: ${e.message}"

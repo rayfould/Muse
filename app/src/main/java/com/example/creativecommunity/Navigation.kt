@@ -3,6 +3,10 @@ package com.example.creativecommunity
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,24 +43,31 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
     // Define common transitions
     val fadeInSpec = tween<Float>(300)
     val fadeOutSpec = tween<Float>(300)
+    // Define scale specs
+    val scaleInSpec = tween<Float>(300)
+    val scaleOutSpec = tween<Float>(300)
+    // Remove unused slide specs
+    // val slideInSpec = tween<androidx.compose.ui.unit.IntOffset>(300)
+    // val slideOutSpec = tween<androidx.compose.ui.unit.IntOffset>(300)
 
     NavHost(navController = navController, startDestination = "login") {
         composable(
             "login",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            // Combine scale and fade (Shared Axis Z)
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }, // Exit slightly enlarges before fading
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) }, // Pop enter scales down from slight enlarge
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { 
             LoginPage(navController) 
         }
         
         composable(
             "main",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -80,10 +91,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "discovery",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -107,10 +118,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "profile",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -134,10 +145,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "saved_posts",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { 
             if (isWideScreen) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -161,10 +172,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "new_post/{category}",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
             if (isWideScreen) {
@@ -189,10 +200,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "category_feed/{category}",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category") ?: "Unknown"
             if (isWideScreen) {
@@ -217,10 +228,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "individual_post/{postId}",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { backStackEntry ->
             val postId = backStackEntry.arguments?.getString("postId") ?: ""
             val currentDestination = navController.currentBackStackEntryAsState().value?.destination
@@ -249,10 +260,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "my_posts",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { 
             val currentDestination = navController.currentBackStackEntryAsState().value?.destination
             if (isWideScreen) {
@@ -277,10 +288,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "view_profile/{userId}",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             if (isWideScreen) {
@@ -305,10 +316,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
 
         composable(
             "user_posts/{userId}",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             if (isWideScreen) {
@@ -333,10 +344,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         
         composable(
             "about_us",
-            enterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            exitTransition = { fadeOut(animationSpec = fadeOutSpec) },
-            popEnterTransition = { fadeIn(animationSpec = fadeInSpec) },
-            popExitTransition = { fadeOut(animationSpec = fadeOutSpec) }
+            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            exitTransition = { scaleOut(targetScale = 1.1f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) },
+            popEnterTransition = { scaleIn(initialScale = 1.1f, animationSpec = scaleInSpec) + fadeIn(animationSpec = fadeInSpec) },
+            popExitTransition = { scaleOut(targetScale = 0.9f, animationSpec = scaleOutSpec) + fadeOut(animationSpec = fadeOutSpec) }
         ) {
             AboutUsPage(navController)
         }
