@@ -341,7 +341,7 @@ fun CategoryFeed(navController: NavController, category: String) {
 
                 // Category Title (takes up middle space)
                 Text(
-                    text = "$category Community",
+                    text = formatCategoryTitle(category),
                     style = MaterialTheme.typography.titleLarge, // Use a prominent style
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center, // Center text
@@ -519,4 +519,14 @@ fun CategoryFeed(navController: NavController, category: String) {
             Text("+")
         }
     }
+}
+
+// --- ADD Helper Function to Format Title ---
+private fun formatCategoryTitle(rawCategory: String): String {
+    return rawCategory
+        .split('_') // Split by underscore
+        .joinToString(" ") { word -> // Join with space
+            word.lowercase() // Convert word to lowercase
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } // Capitalize first letter
+        }
 }
