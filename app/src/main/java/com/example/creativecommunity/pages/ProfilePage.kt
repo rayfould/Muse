@@ -62,6 +62,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.creativecommunity.components.BadgeBoard
+import com.example.creativecommunity.models.Badge
+import com.example.creativecommunity.components.AchievementTiersDisplay
+import java.time.Instant
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -108,9 +116,6 @@ fun ProfilePage(navController: NavController) {
         currImage = uri
         imgurImageURL = null
     }
-
-    // Add a new state variable for badges
-    var badges by remember { mutableStateOf(listOf("Badge 1", "Badge 2", "Badge 3")) }
 
     // Add a scroll state
     val scrollState = rememberScrollState()
@@ -178,20 +183,26 @@ fun ProfilePage(navController: NavController) {
     }
 
     LaunchedEffect(Unit) {
+        isLoading = true
+        error = null
         try {
             val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
-            val profile = withContext(Dispatchers.IO) {
-                SupabaseClient.client.postgrest.from("users")
-                    .select(Columns.raw("username, profile_image, bio")) {
-                        filter { eq("auth_id", authId) }
+            val profileFromView = withContext(Dispatchers.IO) {
+                SupabaseClient.client.postgrest
+                    .from("user_stats")
+                    .select {
+                         filter { eq("auth_id", authId) } 
                     }
                     .decodeSingle<UserProfile>()
             }
-            userProfile = profile
-            editedUsername = profile.username
-            editedBio = profile.bio ?: ""
+            userProfile = profileFromView
+            
+            editedUsername = profileFromView.username
+            editedBio = profileFromView.bio ?: ""
+
         } catch (e: Exception) {
-            error = "Failed to load profile: ${e.message}"
+            error = "Failed to load profile stats: ${e.message}"
+            Log.e("ProfilePageLoad", "Error loading profile stats from view", e)
         } finally {
             isLoading = false
         }
@@ -310,32 +321,6 @@ fun ProfilePage(navController: NavController) {
         }
     }
 
-    // Add a new composable for the badge board
-    @OptIn(ExperimentalLayoutApi::class)
-    @Composable
-    fun BadgeBoard(badges: List<String>) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            FlowRow(
-                modifier = Modifier.padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                badges.forEach { badge ->
-                    Text(
-                        text = badge,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                }
-            }
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -361,6 +346,20 @@ fun ProfilePage(navController: NavController) {
                     val isWideScreen = maxWidth >= breakpoint
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                        // Parse createdAt safely for the display component, assuming UTC if no timezone
+                        val parsedCreatedAt = remember(userProfile?.createdAt) { 
+                            userProfile?.createdAt?.let { 
+                                // Simplify: Replace space with 'T' and always append 'Z'
+                                val timestampString = it.replace(' ', 'T') + "Z"
+                                Log.d("TimestampParse", "Attempting to parse (Simplified): $timestampString") 
+                                runCatching { 
+                                    Instant.parse(timestampString) 
+                                }.onFailure { e -> // Add logging for failure
+                                    Log.e("TimestampParse", "Failed to parse timestamp: $timestampString", e)
+                                }.getOrNull() 
+                            }
+                        }
 
                         if (isWideScreen) {
                             // Wide Screen Layout: Row for PFP/Info
@@ -427,9 +426,15 @@ fun ProfilePage(navController: NavController) {
                                 }
                             }
                             Spacer(modifier = Modifier.height(16.dp))
-                            // Badge Board (always full width below the Row or PFP)
-                            BadgeBoard(badges = badges)
-
+                            // --- Use AchievementTiersDisplay with data from userProfile state --- 
+                            AchievementTiersDisplay(
+                                postCount = userProfile!!.postCount,
+                                commentCount = userProfile!!.commentCount,
+                                likesReceived = userProfile!!.likesReceivedCount,
+                                savesReceived = userProfile!!.savesReceivedCount,
+                                accountCreatedAt = parsedCreatedAt
+                            )
+                            // --- End Component Usage --- 
 
                         } else {
                             // Narrow Screen Layout: Original Column layout
@@ -446,10 +451,16 @@ fun ProfilePage(navController: NavController) {
                                 )
                             }
 
-
                             Spacer(modifier = Modifier.height(16.dp))
-                            // Badge Board (always full width below the Row or PFP)
-                            BadgeBoard(badges = badges)
+                            // --- Use AchievementTiersDisplay with data from userProfile state --- 
+                            AchievementTiersDisplay(
+                                postCount = userProfile!!.postCount,
+                                commentCount = userProfile!!.commentCount,
+                                likesReceived = userProfile!!.likesReceivedCount,
+                                savesReceived = userProfile!!.savesReceivedCount,
+                                accountCreatedAt = parsedCreatedAt
+                            )
+                            // --- End Component Usage --- 
                             // Username
                             OutlinedTextField(
                                 value = editedUsername,
@@ -539,12 +550,14 @@ fun ProfilePage(navController: NavController) {
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            // Apply fixed width and height
+                            modifier = Modifier.height(48.dp).width(180.dp), 
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colorScheme.error)
                         ) {
+                            // Wrap in Row for centering
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth(), // Row fills button
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {

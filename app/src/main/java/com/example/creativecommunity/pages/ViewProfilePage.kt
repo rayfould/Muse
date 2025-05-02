@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,8 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,16 +31,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.models.Badge
 import com.example.creativecommunity.models.UserProfile
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.creativecommunity.components.BadgeBoard
+import com.example.creativecommunity.components.AchievementTiersDisplay
+import java.time.Instant
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ViewProfilePage(navController: NavController, userId: String) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
@@ -46,20 +63,28 @@ fun ViewProfilePage(navController: NavController, userId: String) {
     LaunchedEffect(userId) {
         isLoading = true
         error = null
+        userProfile = null
+
         try {
-            Log.d("ViewProfilePage", "Fetching profile for userId: $userId")
-            val profile = withContext(Dispatchers.IO) {
-                SupabaseClient.client.postgrest.from("users")
-                    .select(Columns.raw("username, profile_image, bio")) { // Use UserProfile fields
+            Log.d("ViewProfilePage", "Fetching profile stats for userId: $userId")
+            val profileFromView = withContext(Dispatchers.IO) {
+                SupabaseClient.client.postgrest
+                    .from("user_stats")
+                    .select() {
                         filter { eq("auth_id", userId) }
                     }
-                    .decodeSingle<UserProfile>() // Decode into UserProfile
+                    .decodeSingleOrNull<UserProfile>()
             }
-            userProfile = profile
-            Log.d("ViewProfilePage", "Successfully fetched profile: ${profile.username}")
+            userProfile = profileFromView
+            Log.d("ViewProfilePage", "Successfully fetched profile stats: ${profileFromView?.username}")
+
+            if (profileFromView == null) {
+                error = "User profile not found."
+            }
+
         } catch (e: Exception) {
-            Log.e("ViewProfilePage", "Failed to load profile for userId: $userId", e)
-            error = "Failed to load profile: ${e.message}"
+            Log.e("ViewProfilePage", "Failed to load profile stats for userId: $userId", e)
+            error = "Failed to load profile stats: ${e.message}"
             userProfile = null
         } finally {
             isLoading = false
@@ -75,6 +100,20 @@ fun ViewProfilePage(navController: NavController, userId: String) {
                 Text(text = error!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
             }
             userProfile != null -> {
+                // Parse createdAt safely, assuming UTC if no timezone
+                val parsedCreatedAt = remember(userProfile?.createdAt) { 
+                    userProfile?.createdAt?.let { 
+                        // Simplify: Replace space with 'T' and always append 'Z'
+                        val timestampString = it.replace(' ', 'T') + "Z"
+                        Log.d("TimestampParseView", "Attempting to parse (Simplified): $timestampString") 
+                        runCatching { 
+                            Instant.parse(timestampString) 
+                        }.onFailure { e -> 
+                            Log.e("TimestampParseView", "Failed to parse timestamp: $timestampString", e)
+                        }.getOrNull() 
+                    }
+                }
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -93,20 +132,14 @@ fun ViewProfilePage(navController: NavController, userId: String) {
                     Text(text = userProfile!!.username, style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        tonalElevation = 2.dp
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Badge Board", style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Their earned badges will appear here soon!")
-                            // TODO: Implement badge display logic based on userId
-                        }
-                    }
+                    AchievementTiersDisplay(
+                        postCount = userProfile!!.postCount,
+                        commentCount = userProfile!!.commentCount,
+                        likesReceived = userProfile!!.likesReceivedCount,
+                        savesReceived = userProfile!!.savesReceivedCount,
+                        accountCreatedAt = parsedCreatedAt
+                    )
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(text = userProfile!!.bio ?: "No bio yet.", style = MaterialTheme.typography.bodyLarge)
@@ -120,7 +153,8 @@ fun ViewProfilePage(navController: NavController, userId: String) {
                 }
             }
             else -> {
-                Text(text = "User profile not found.", modifier = Modifier.align(Alignment.Center))
+                // Error message is already shown via the error state, but we could add 
+                // a specific "User not found" message here if needed.
             }
         }
     }
