@@ -70,6 +70,9 @@ import com.example.creativecommunity.components.BadgeBoard
 import com.example.creativecommunity.models.Badge
 import com.example.creativecommunity.components.AchievementTiersDisplay
 import java.time.Instant
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -119,6 +122,9 @@ fun ProfilePage(navController: NavController) {
 
     // Add a scroll state
     val scrollState = rememberScrollState()
+
+    // Add SnackbarHostState
+    val snackbarHostState = remember { SnackbarHostState() }
 
     suspend fun uploadImageToImgur(imageUri: Uri): String? = withContext(Dispatchers.IO) {
         val contentResolver = context.contentResolver
@@ -221,32 +227,90 @@ fun ProfilePage(navController: NavController) {
     }
 
     fun saveChanges() {
+        // Don't save if nothing actually changed
+        if (!hasChanges) {
+             return 
+        }
+
         scope.launch {
             isSaving = true
+            error = null // Clear previous general errors
             try {
                 val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
-                withContext(Dispatchers.IO) {
-                    SupabaseClient.client.postgrest.from("users")
-                        .update({
-                            set("username", editedUsername)
-                            set("bio", editedBio)
-                            if (imgurImageURL != null) {
-                                set("profile_image", imgurImageURL)
-                            }
-                        }) {
-                            filter { eq("auth_id", authId) }
-                        }
+                var proceedWithUpdate = true // Flag to control update execution
+
+                // --- Username Uniqueness Check ---
+                if (editedUsername != userProfile?.username) { 
+                     Log.d("ProfilePageSave", "Checking username uniqueness for: $editedUsername")
+                     val existingUser = withContext(Dispatchers.IO) {
+                         SupabaseClient.client.postgrest.from("users")
+                             .select(Columns.raw("id")) { 
+                                 filter {
+                                     eq("username", editedUsername) 
+                                     neq("auth_id", authId) // Important: Exclude the current user!
+                                 }
+                                 limit(1) // We only care if at least one other exists
+                             }
+                             .decodeSingleOrNull<Map<String, Int>>() // Check if any result found
+                     }
+
+                    if (existingUser != null) {
+                         Log.w("ProfilePageSave", "Username '$editedUsername' is already taken.")
+                         // Show Snackbar instead of setting general error
+                         scope.launch { 
+                            snackbarHostState.showSnackbar("Username '$editedUsername' is already taken.")
+                         }
+                         proceedWithUpdate = false 
+                    } else {
+                         Log.d("ProfilePageSave", "Username '$editedUsername' is available.")
+                    }
                 }
-                // Update local state
-                userProfile = userProfile?.copy(
-                    username = editedUsername,
-                    bio = editedBio,
-                    profileImage = imgurImageURL ?: userProfile?.profileImage
-                )
-                hasChanges = false
-                imgurImageURL = null
+                // --- End Username Uniqueness Check ---
+
+                // Only update if the check passed
+                if (proceedWithUpdate) {
+                    Log.d("ProfilePageSave", "Proceeding with profile update.")
+                    withContext(Dispatchers.IO) {
+                        SupabaseClient.client.postgrest.from("users")
+                            .update({
+                                // Only include username if it actually changed (optional optimization)
+                                if (editedUsername != userProfile?.username) {
+                                     set("username", editedUsername)
+                                }
+                                // Only include bio if it actually changed
+                                if (editedBio != (userProfile?.bio ?: "")) {
+                                     set("bio", editedBio)
+                                }
+                                // Only include image if it was newly uploaded
+                                if (imgurImageURL != null) {
+                                    set("profile_image", imgurImageURL)
+                                }
+                            }) {
+                                filter { eq("auth_id", authId) }
+                            }
+                    }
+                    // Update local state immediately for better UX
+                    userProfile = userProfile?.copy(
+                        username = editedUsername, 
+                        bio = editedBio,
+                        profileImage = imgurImageURL ?: userProfile?.profileImage
+                    )
+                    hasChanges = false // Reset changes state
+                    imgurImageURL = null // Clear temporary uploaded image URL
+                    Log.d("ProfilePageSave", "Profile update successful.")
+                    // Show success snackbar
+                    scope.launch { snackbarHostState.showSnackbar("Profile updated successfully!") }
+                } else {
+                     Log.d("ProfilePageSave", "Profile update skipped due to username conflict or no changes needed.")
+                }
+
             } catch (e: Exception) {
-                error = "Failed to save changes: ${e.message}"
+                Log.e("ProfilePageSave", "Failed to save changes", e)
+                // Use general error display for critical failures
+                error = "Failed to save changes: ${e.message}" 
+                editedUsername = userProfile?.username ?: ""
+                editedBio = userProfile?.bio ?: ""
+                hasChanges = true 
             } finally {
                 isSaving = false
             }
@@ -289,6 +353,8 @@ fun ProfilePage(navController: NavController) {
                     newEmail = ""
                     confirmEmail = ""
                     Log.d("ProfilePage", "Email updated successfully in both auth and users tables")
+                    // Show success snackbar
+                    scope.launch { snackbarHostState.showSnackbar("Email update initiated. Check your inbox.") }
                 } else {
                     Log.e("ProfilePage", "Auth update returned null response")
                     throw Exception("Failed to update auth email")
@@ -317,6 +383,8 @@ fun ProfilePage(navController: NavController) {
                 newPassword = ""
                 confirmPassword = ""
                 Log.d("ProfilePage", "Password update initiated.")
+                // Show success snackbar
+                scope.launch { snackbarHostState.showSnackbar("Password update successfully initiated.") }
             } catch (e: Exception) {
                 Log.e("ProfilePage", "Error updating password: ${e.message}", e)
                 passwordChangeError = "Failed to update password: ${e.message}"
@@ -326,57 +394,133 @@ fun ProfilePage(navController: NavController) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        when {
-            isLoading -> {
-                CircularProgressIndicator()
-            }
-            error != null -> {
-                Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            userProfile != null -> {
-                // Use BoxWithConstraints to determine layout based on width
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val breakpoint = 600.dp
-                    val isWideScreen = maxWidth >= breakpoint
+    // --- Wrap content in Scaffold --- 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background // Apply background to Scaffold
+    ) { paddingValues -> // Content lambda provides padding
+        // Original Column moved inside Scaffold, apply padding
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues) // Apply Scaffold padding
+                .padding(horizontal = 16.dp) // Apply original horizontal padding
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            when {
+                isLoading -> {
+                    CircularProgressIndicator()
+                }
+                error != null -> {
+                    Text(
+                        text = error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(vertical = 16.dp) // Add padding
+                    )
+                }
+                userProfile != null -> {
+                    // Use BoxWithConstraints to determine layout based on width
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val breakpoint = 600.dp
+                        val isWideScreen = maxWidth >= breakpoint
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-                        // Parse createdAt safely for the display component, assuming UTC if no timezone
-                        val parsedCreatedAt = remember(userProfile?.createdAt) { 
-                            userProfile?.createdAt?.let { 
-                                // Simplify: Replace space with 'T' and always append 'Z'
-                                val timestampString = it.replace(' ', 'T') + "Z"
-                                Log.d("TimestampParse", "Attempting to parse (Simplified): $timestampString") 
-                                runCatching { 
-                                    Instant.parse(timestampString) 
-                                }.onFailure { e -> // Add logging for failure
-                                    Log.e("TimestampParse", "Failed to parse timestamp: $timestampString", e)
-                                }.getOrNull() 
+                            // Parse createdAt safely for the display component, assuming UTC if no timezone
+                            val parsedCreatedAt = remember(userProfile?.createdAt) { 
+                                userProfile?.createdAt?.let { 
+                                    // Simplify: Replace space with 'T' and always append 'Z'
+                                    val timestampString = it.replace(' ', 'T') + "Z"
+                                    Log.d("TimestampParse", "Attempting to parse (Simplified): $timestampString") 
+                                    runCatching { 
+                                        Instant.parse(timestampString) 
+                                    }.onFailure { e -> // Add logging for failure
+                                        Log.e("TimestampParse", "Failed to parse timestamp: $timestampString", e)
+                                    }.getOrNull() 
+                                }
                             }
-                        }
 
-                        if (isWideScreen) {
-                            // Wide Screen Layout: Row for PFP/Info
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                // Left side: Profile Picture
+                            if (isWideScreen) {
+                                // Wide Screen Layout: Row for PFP/Info
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    // Left side: Profile Picture
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(end = 16.dp)
+                                            .size(120.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        ProfilePictureSection(
+                                            profileImageUrl = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
+                                            isUploading = isUploadingPfp,
+                                            onPfpClick = { showPfpDialog = true },
+                                            onEditClick = { imagePickerLauncher.launch("image/*") }
+                                        )
+                                    }
+
+                                    // Right side: Username & Bio Fields in a Column
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // Username
+                                        OutlinedTextField(
+                                            value = editedUsername,
+                                            onValueChange = { editedUsername = it },
+                                            label = { Text("Username") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                                textColor = MaterialTheme.colorScheme.onSurface,
+                                                cursorColor = MaterialTheme.colorScheme.primary,
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
+                                        )
+
+                                        // Bio
+                                        OutlinedTextField(
+                                            value = editedBio,
+                                            onValueChange = { editedBio = it },
+                                            label = { Text("Bio") },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(min = 120.dp),
+                                            minLines = 3,
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                                textColor = MaterialTheme.colorScheme.onSurface,
+                                                cursorColor = MaterialTheme.colorScheme.primary,
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            )
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                // --- Use AchievementTiersDisplay with data from userProfile state --- 
+                                AchievementTiersDisplay(
+                                    postCount = userProfile!!.postCount,
+                                    commentCount = userProfile!!.commentCount,
+                                    likesReceived = userProfile!!.likesReceivedCount,
+                                    savesReceived = userProfile!!.savesReceivedCount,
+                                    accountCreatedAt = parsedCreatedAt
+                                )
+                                // --- End Component Usage --- 
+
+                            } else {
+                                // Narrow Screen Layout: Original Column layout
+                                // Profile Picture with Edit Button
                                 Box(
-                                    modifier = Modifier
-                                        .padding(end = 16.dp)
-                                        .size(120.dp),
+                                    modifier = Modifier.size(140.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     ProfilePictureSection(
@@ -387,221 +531,153 @@ fun ProfilePage(navController: NavController) {
                                     )
                                 }
 
-                                // Right side: Username & Bio Fields in a Column
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                // --- Use AchievementTiersDisplay with data from userProfile state --- 
+                                AchievementTiersDisplay(
+                                    postCount = userProfile!!.postCount,
+                                    commentCount = userProfile!!.commentCount,
+                                    likesReceived = userProfile!!.likesReceivedCount,
+                                    savesReceived = userProfile!!.savesReceivedCount,
+                                    accountCreatedAt = parsedCreatedAt
+                                )
+                                // --- End Component Usage --- 
+                                // Username
+                                OutlinedTextField(
+                                    value = editedUsername,
+                                    onValueChange = {
+                                        editedUsername = it
+                                    },
+                                    label = { Text("Username") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                                        textColor = MaterialTheme.colorScheme.onSurface,
+                                        cursorColor = MaterialTheme.colorScheme.primary,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Bio
+                                OutlinedTextField(
+                                    value = editedBio,
+                                    onValueChange = {
+                                        editedBio = it
+                                    },
+                                    label = { Text("Bio") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp),
+                                    minLines = 3,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                                        textColor = MaterialTheme.colorScheme.onSurface,
+                                        cursorColor = MaterialTheme.colorScheme.primary,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                )
+                            }
+
+                            // Common elements below PFP/Info/Badges section
+                            Spacer(modifier = Modifier.height(32.dp))
+
+                            // Settings Buttons
+                            if (isWideScreen) {
+                                // Wide Screen: Use FlowRow for buttons
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    maxItemsInEachRow = 3 // Example: Limit items per row for better structure
                                 ) {
-                                    // Username
-                                    OutlinedTextField(
-                                        value = editedUsername,
-                                        onValueChange = { editedUsername = it },
-                                        label = { Text("Username") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = TextFieldDefaults.outlinedTextFieldColors(
-                                            textColor = MaterialTheme.colorScheme.onSurface,
-                                            cursorColor = MaterialTheme.colorScheme.primary,
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
+                                    SettingsButtons(
+                                        navController,
+                                        showEmailDialog = { showEmailDialog = it },
+                                        showPasswordDialog = { showPasswordDialog = it }
                                     )
-
-                                    // Bio
-                                    OutlinedTextField(
-                                        value = editedBio,
-                                        onValueChange = { editedBio = it },
-                                        label = { Text("Bio") },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 120.dp),
-                                        minLines = 3,
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = TextFieldDefaults.outlinedTextFieldColors(
-                                            textColor = MaterialTheme.colorScheme.onSurface,
-                                            cursorColor = MaterialTheme.colorScheme.primary,
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
+                                }
+                            } else {
+                                // Narrow Screen: Use Column
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    SettingsButtons(
+                                        navController,
+                                        showEmailDialog = { showEmailDialog = it },
+                                        showPasswordDialog = { showPasswordDialog = it }
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            // --- Use AchievementTiersDisplay with data from userProfile state --- 
-                            AchievementTiersDisplay(
-                                postCount = userProfile!!.postCount,
-                                commentCount = userProfile!!.commentCount,
-                                likesReceived = userProfile!!.likesReceivedCount,
-                                savesReceived = userProfile!!.savesReceivedCount,
-                                accountCreatedAt = parsedCreatedAt
-                            )
-                            // --- End Component Usage --- 
 
-                        } else {
-                            // Narrow Screen Layout: Original Column layout
-                            // Profile Picture with Edit Button
-                            Box(
-                                modifier = Modifier.size(140.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                ProfilePictureSection(
-                                    profileImageUrl = imgurImageURL ?: (userProfile!!.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg"),
-                                    isUploading = isUploadingPfp,
-                                    onPfpClick = { showPfpDialog = true },
-                                    onEditClick = { imagePickerLauncher.launch("image/*") }
-                                )
-                            }
+                            Spacer(modifier = Modifier.height(8.dp)) // Adjusted spacer
 
-                            Spacer(modifier = Modifier.height(16.dp))
-                            // --- Use AchievementTiersDisplay with data from userProfile state --- 
-                            AchievementTiersDisplay(
-                                postCount = userProfile!!.postCount,
-                                commentCount = userProfile!!.commentCount,
-                                likesReceived = userProfile!!.likesReceivedCount,
-                                savesReceived = userProfile!!.savesReceivedCount,
-                                accountCreatedAt = parsedCreatedAt
-                            )
-                            // --- End Component Usage --- 
-                            // Username
-                            OutlinedTextField(
-                                value = editedUsername,
-                                onValueChange = {
-                                    editedUsername = it
-                                },
-                                label = { Text("Username") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = TextFieldDefaults.outlinedTextFieldColors(
-                                    textColor = MaterialTheme.colorScheme.onSurface,
-                                    cursorColor = MaterialTheme.colorScheme.primary,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Bio
-                            OutlinedTextField(
-                                value = editedBio,
-                                onValueChange = {
-                                    editedBio = it
-                                },
-                                label = { Text("Bio") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp),
-                                minLines = 3,
-                                shape = RoundedCornerShape(12.dp),
-                                colors = TextFieldDefaults.outlinedTextFieldColors(
-                                    textColor = MaterialTheme.colorScheme.onSurface,
-                                    cursorColor = MaterialTheme.colorScheme.primary,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            )
-                        }
-
-                        // Common elements below PFP/Info/Badges section
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        // Settings Buttons
-                        if (isWideScreen) {
-                            // Wide Screen: Use FlowRow for buttons
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                maxItemsInEachRow = 3 // Example: Limit items per row for better structure
-                            ) {
-                                SettingsButtons(
-                                    navController,
-                                    showEmailDialog = { showEmailDialog = it },
-                                    showPasswordDialog = { showPasswordDialog = it }
-                                )
-                            }
-                        } else {
-                            // Narrow Screen: Use Column
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                SettingsButtons(
-                                    navController,
-                                    showEmailDialog = { showEmailDialog = it },
-                                    showPasswordDialog = { showPasswordDialog = it }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp)) // Adjusted spacer
-
-                        // Logout Button
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    SupabaseClient.client.auth.signOut()
-                                    navController.navigate("login") { 
-                                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                                    }
-                                }
-                            },
-                            // Apply fixed width and height
-                            modifier = Modifier.height(48.dp).width(180.dp), 
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            // Wrap in Row for centering
-                            Row(
-                                modifier = Modifier.fillMaxWidth(), // Row fills button
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Logout", style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // Save Changes Button (only shown when there are changes)
-                        if (hasChanges) {
+                            // Logout Button
                             Button(
-                                onClick = { saveChanges() },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                onClick = {
+                                    scope.launch {
+                                        SupabaseClient.client.auth.signOut()
+                                        navController.navigate("login") { 
+                                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                        }
+                                    }
+                                },
+                                // Apply fixed width and height
+                                modifier = Modifier.height(48.dp).width(180.dp), 
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                enabled = !isSaving
+                                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colorScheme.error)
                             ) {
+                                // Wrap in Row for centering
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(), 
+                                    modifier = Modifier.fillMaxWidth(), // Row fills button
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (isSaving) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary
-                                        )
-                                    } else {
-                                        Text("Save Changes", style = MaterialTheme.typography.labelLarge)
+                                    Text("Logout", style = MaterialTheme.typography.labelLarge)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Save Changes Button (only shown when there are changes)
+                            if (hasChanges) {
+                                Button(
+                                    onClick = { saveChanges() },
+                                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    enabled = !isSaving
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(), 
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (isSaving) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                color = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        } else {
+                                            Text("Save Changes", style = MaterialTheme.typography.labelLarge)
+                                        }
                                     }
                                 }
                             }
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
                         }
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
             }
