@@ -5,7 +5,8 @@
 **Team Members:** Jeremy Lau, Rudolf Rissling
 
 **[Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**<br>
-**[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**
+**[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**<br>
+**[Final Project Presentation](https://docs.google.com/presentation/d/12Gz8UlzyIpiWZ9X3rvbdxE-IqAGEo6es-8N6PCdgfNQ/edit?usp=sharing).**
 
 
 ## Table of Contents:
@@ -43,7 +44,8 @@
 10. Make account changes - e.g. changing password, change your email
 11. Account creation, login, and logout
 12. Splash screen loading screen - colorful gradient, begins user curiosity and creative flow
-13. View saved posts as well as your own posts
+13. View saved posts as well as your own posts (access through My Profile page)
+14. See badges for your own accomplishments on your profile
 
 ## Design Decisions
 1. Focus on building communities around creative outlets
@@ -209,7 +211,7 @@ Maybe have a way to add friends or follow people whose art that you like would b
 **Feedback:**<br>
 I like the layout on the home screen with the categories, feels very organized - I know how the app works, pretty straightforward for a new user, I like that I can physically click and navigate into different communities - it feels better than maybe using a filter or search bar.<br><br>
 **Suggested improvements:**<br>
-Fade in could be a bit slower to get a better effect. Maybe choose a feed from different categories instead of going to each one - a tailored home page. <br><br>
+Fade in could be a bit slower to get a better effect. Maybe choose a feed from different categories instead of going to each one - a tailored home page. Also, since you are trying to build a community, maybe add a function to chat with friends/message people individually? <br><br>
 
 **<ins>Friend #3</ins>**<br><br>
 **Feedback:**<br>
