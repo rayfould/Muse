@@ -306,6 +306,7 @@ fun CategoryFeed(navController: NavController, category: String) {
                     }
                 }
                 displayedPosts = sortedResult
+                listState.scrollToItem(0) // Scroll to top after sorting
             } catch (e: Exception) {
                 fetchError = "Failed to sort posts: ${e.message}"
                 Log.e("CategoryFeed", "Sort error", e)
