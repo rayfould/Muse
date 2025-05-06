@@ -186,7 +186,11 @@ fun ProfilePage(navController: NavController) {
         isLoading = true
         error = null
         try {
-            val authId = SupabaseClient.client.auth.retrieveUserForCurrentSession().id
+            // Fetch the current auth user session
+            val currentUser = SupabaseClient.client.auth.retrieveUserForCurrentSession()
+            val authId = currentUser.id
+            val emailFromAuth = currentUser.email ?: "N/A" // Get email, handle null
+            
             val profileFromView = withContext(Dispatchers.IO) {
                 SupabaseClient.client.postgrest
                     .from("user_stats")
@@ -199,6 +203,7 @@ fun ProfilePage(navController: NavController) {
             
             editedUsername = profileFromView.username
             editedBio = profileFromView.bio ?: ""
+            currentEmail = emailFromAuth // Store the fetched email in the state
 
         } catch (e: Exception) {
             error = "Failed to load profile stats: ${e.message}"
@@ -635,15 +640,40 @@ fun ProfilePage(navController: NavController) {
                 showEmailDialog = false
                 emailChangeError = null // Clear error on dismiss
             },
-            title = { Text("Change Email") },
+            // Explicitly set colors for better contrast
+            containerColor = MaterialTheme.colorScheme.surface, 
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
+            // --- End of color setting ---
+            title = { 
+                 // Explicitly set title color
+                Text("Change Email", color = MaterialTheme.colorScheme.onSurface)
+            },
             text = {
                 Column {
+                    // --- Add Text for Current Email inside Dialog ---
+                     Text(
+                        text = "Current: $currentEmail",
+                        style = MaterialTheme.typography.bodyMedium, // Use slightly smaller style inside dialog
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), // Slightly faded
+                        modifier = Modifier.padding(bottom = 12.dp) // Add spacing below
+                    )
+                    // --- End Text for Current Email ---
                     OutlinedTextField(
                         value = newEmail,
                         onValueChange = { newEmail = it },
                         label = { Text("New Email") },
                         isError = emailChangeError != null,
-                        singleLine = true
+                        singleLine = true,
+                        // Set TextField colors for contrast
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            textColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -651,7 +681,16 @@ fun ProfilePage(navController: NavController) {
                         onValueChange = { confirmEmail = it },
                         label = { Text("Confirm New Email") },
                         isError = emailChangeError != null,
-                        singleLine = true
+                        singleLine = true,
+                        // Set TextField colors for contrast
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            textColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
                     if (emailChangeError != null) {
                         Text(
@@ -675,21 +714,27 @@ fun ProfilePage(navController: NavController) {
                             updateEmail(newEmail)
                         }
                     },
-                    enabled = !isEmailChanging
+                    enabled = !isEmailChanging,
+                    // Explicitly set button text color
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) {
                     if (isEmailChanging) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Update")
+                        Text("Update") // Text color now controlled by ButtonDefaults
                     }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { 
-                    showEmailDialog = false 
-                    emailChangeError = null
-                }) {
-                    Text("Cancel")
+                TextButton(
+                    onClick = { 
+                        showEmailDialog = false 
+                        emailChangeError = null
+                    },
+                    // Explicitly set button text color
+                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Cancel") // Text color now controlled by ButtonDefaults
                 }
             }
         )
@@ -702,7 +747,15 @@ fun ProfilePage(navController: NavController) {
                 showPasswordDialog = false 
                 passwordChangeError = null // Clear error on dismiss
             },
-            title = { Text("Change Password") },
+             // Explicitly set colors for better contrast
+            containerColor = MaterialTheme.colorScheme.surface, 
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface,
+            // --- End of color setting ---
+            title = { 
+                // Explicitly set title color
+                Text("Change Password", color = MaterialTheme.colorScheme.onSurface)
+            },
             text = {
                 Column {
                     OutlinedTextField(
@@ -711,7 +764,16 @@ fun ProfilePage(navController: NavController) {
                         label = { Text("New Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         isError = passwordChangeError != null,
-                        singleLine = true
+                        singleLine = true,
+                        // Set TextField colors for contrast
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            textColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -720,7 +782,16 @@ fun ProfilePage(navController: NavController) {
                         label = { Text("Confirm New Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         isError = passwordChangeError != null,
-                        singleLine = true
+                        singleLine = true,
+                        // Set TextField colors for contrast
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            textColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
                      if (passwordChangeError != null) {
                         Text(
@@ -745,21 +816,27 @@ fun ProfilePage(navController: NavController) {
                             updatePassword(newPassword)
                         }
                      },
-                     enabled = !isPasswordChanging
+                     enabled = !isPasswordChanging,
+                     // Explicitly set button text color
+                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) {
                      if (isPasswordChanging) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Update")
+                        Text("Update") // Text color now controlled by ButtonDefaults
                     }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { 
-                    showPasswordDialog = false
-                    passwordChangeError = null
-                }) {
-                    Text("Cancel")
+                TextButton(
+                    onClick = { 
+                        showPasswordDialog = false
+                        passwordChangeError = null
+                    },
+                    // Explicitly set button text color
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Cancel") // Text color now controlled by ButtonDefaults
                 }
             }
         )
