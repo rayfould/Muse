@@ -209,7 +209,7 @@ Maybe have a way to add friends or follow people whose art that you like would b
 **Feedback:**<br>
 I like the layout on the home screen with the categories, feels very organized - I know how the app works, pretty straightforward for a new user, I like that I can physically click and navigate into different communities - it feels better than maybe using a filter or search bar.<br><br>
 **Suggested improvements:**<br>
-Fade in could be a bit slower to get a better effect. Maybe choose a feed from different categories instead of going to each one - a tailored home page. <br><br>
+Fade in could be a bit slower to get a better effect. Maybe choose a feed from different categories instead of going to each one - a tailored home page. Also, since you are trying to build a community, maybe add a function to chat with friends/message people individually? <br><br>
 
 **<ins>Friend #3</ins>**<br><br>
 **Feedback:**<br>
