@@ -235,25 +235,22 @@ fun DiscoveryPage(navController: NavController) {
                     .background(
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                         shape = RoundedCornerShape(18.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    )
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp, horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 4.dp, horizontal = 8.dp)
                 ) {
                     Text(
                         text = "Posts For You",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.align(Alignment.Center),
                         textAlign = TextAlign.Center
                     )
 
-                    Box {
+                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
                         IconButton(onClick = { showSortDropdown = true }) {
                             Icon(
                                 imageVector = Icons.Default.Sort,

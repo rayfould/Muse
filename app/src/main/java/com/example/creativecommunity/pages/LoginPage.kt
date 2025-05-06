@@ -145,7 +145,7 @@ fun LoginPage(navController: NavController) {
                                 painter = painterResource(id = R.drawable.logo_transparent),
                                 contentDescription = stringResource(id = R.string.content_desc_login_logo),
                                 modifier = Modifier
-                                    .height(350.dp)
+                                    .height(320.dp)
                                     .padding(bottom = 0.dp)
                             )
                         }
