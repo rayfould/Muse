@@ -52,10 +52,6 @@ fun BottomNavigationBar(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(
-                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                    else Color.Transparent
-                                )
                                 .padding(6.dp)
                         ) {
                             Icon(
@@ -94,10 +90,6 @@ fun BottomNavigationBar(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(
-                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                    else Color.Transparent
-                                )
                                 .padding(6.dp)
                         ) {
                             Icon(

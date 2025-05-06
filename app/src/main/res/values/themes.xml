@@ -9,4 +9,16 @@
         <!-- Ensure navigation bar icons are light (if applicable) -->
         <item name="android:windowLightNavigationBar">false</item>
     </style>
+
+    <!-- Splash Screen Theme with BLACK background and specific logo -->
+    <style name="Theme.Muse.SplashScreen" parent="Theme.SplashScreen">
+        <!-- Make the splash screen background black -->
+        <item name="windowSplashScreenBackground">@android:color/black</item> 
+        
+        <!-- Set the transparent logo as the icon -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_transparent</item> 
+        
+        <!-- Set the theme to transition to *after* the splash screen -->
+        <item name="postSplashScreenTheme">@style/Theme.CreativeCommunity</item> 
+    </style>
 </resources>
