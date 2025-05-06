@@ -68,7 +68,7 @@
 
 Directory:<br>
 
-CreativeCommunityApp.kt<br>
+MuseApp.kt<br>
 MainActivity.kt<br>
 Navigation.kt<br>
 SupabaseClient.kt<br>

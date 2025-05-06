@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.CreativeCommunity" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Muse" parent="android:Theme.Material.NoActionBar">
         <!-- Set the window background explicitly to the dark navy color -->
         <item name="android:windowBackground">@color/background_navy</item>
         <!-- Ensure status bar icons are light -->
@@ -19,6 +19,6 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/logo_transparent</item> 
         
         <!-- Set the theme to transition to *after* the splash screen -->
-        <item name="postSplashScreenTheme">@style/Theme.CreativeCommunity</item> 
+        <item name="postSplashScreenTheme">@style/Theme.Muse</item>
     </style>
 </resources>

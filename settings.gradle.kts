@@ -23,6 +23,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CreativeCommunity"
+rootProject.name = "Muse"
 include(":app")
  

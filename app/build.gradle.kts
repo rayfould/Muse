@@ -15,6 +15,16 @@ val imgurClientId: String by lazy {
     clientId
 }
 
+// Load keystore properties
+val keystoreProperties = Properties()
+val keystorePropsFile = rootProject.file("local.properties")
+if (keystorePropsFile.exists()) {
+    keystoreProperties.load(keystorePropsFile.inputStream())
+} else {
+    // Handle missing local.properties for signing if needed, or throw error
+    println("Warning: local.properties not found. Release signing may fail.")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,11 +33,33 @@ plugins {
 }
 
 android {
-    namespace = "com.example.creativecommunity"
+    namespace = "dev.riss.muse"
     compileSdk = 35
 
+    // Define Signing Configs
+    signingConfigs {
+        create("release") {
+            // Read properties, providing default empty string if not found
+            val storeFilePassword = keystoreProperties.getProperty("muse.keystore.password", "")
+            val keyAliasName = keystoreProperties.getProperty("muse.keystore.key.alias", "")
+            val keyPasswordValue = keystoreProperties.getProperty("muse.keystore.key.password", "")
+            val keystorePath = "../../../../Important/keystores/keystore1.jks" // Use the calculated relative path
+
+            // Check if properties were loaded - gradle sync might pass but build will fail
+            if (storeFilePassword.isNotEmpty() && keyAliasName.isNotEmpty() && keyPasswordValue.isNotEmpty()) {
+                storeFile = file(keystorePath)
+                storePassword = storeFilePassword
+                keyAlias = keyAliasName
+                keyPassword = keyPasswordValue
+            } else {
+                println("Warning: Keystore properties not fully defined in local.properties. Release signing disabled.")
+                // Optionally prevent build failure here if needed for debug/CI without credentials
+            }
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.example.creativecommunity"
+        applicationId = "dev.riss.muse"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -39,11 +71,16 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Enable code shrinking
+            isMinifyEnabled = true 
+            // Enable resource shrinking
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Assign the signing config to the release build type
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
