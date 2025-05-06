@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
 import kotlinx.serialization.Serializable
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun Comment(
@@ -41,9 +42,9 @@ fun Comment(
         Spacer(modifier = Modifier.width(10.dp))
 
         Column {
-            Text(text = username)
+            Text(text = username, color = Color.White)
             Spacer(modifier = Modifier.height(5.dp))
-            Text(text = commentText)
+            Text(text = commentText, color = Color.White)
             if (onReplyClicked != null) {
                 androidx.compose.material3.TextButton(onClick = onReplyClicked) {
                     Text("Reply")
