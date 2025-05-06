@@ -22,24 +22,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// Commented out code below - kept for reference if needed later
-
-// // Since we have to pass in arguments through navigation, we have to redo routes - this is in Navigation.kt
-// 
-// //Composable to allow us to navigate through the app.
-// //@Composable
-// //fun AppNavigation() {
-// //    val navController = rememberNavController()
-// //    NavHost(navController = navController, startDestination = "login") {
-// //        composable("login") {
-// //            LoginPage(navController = navController)
-// //        }
-// //        composable("main") {
-// //            MainPage(navController = navController)
-// //        }
-// //        composable("new_post") {
-// //            NewPostPage(navController = navController)
-// //        }
-// //    }
-// //}

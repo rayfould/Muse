@@ -49,9 +49,6 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
     // Define scale specs
     val scaleInSpec = tween<Float>(300)
     val scaleOutSpec = tween<Float>(300)
-    // Remove unused slide specs
-    // val slideInSpec = tween<androidx.compose.ui.unit.IntOffset>(300)
-    // val slideOutSpec = tween<androidx.compose.ui.unit.IntOffset>(300)
 
     NavHost(navController = navController, startDestination = "login") {
         composable(

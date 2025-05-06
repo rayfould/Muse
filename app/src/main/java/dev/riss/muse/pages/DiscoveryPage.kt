@@ -403,15 +403,3 @@ private suspend fun fetchAndScorePosts(
     
     onComplete(recommendedPosts)
 }
-
-// Placeholder/Removed fetchAndScorePosts - RecommendationEngine needs integration
-/*
-suspend fun fetchAndScorePosts(
-    posts: List<DiscoveryPost>,
-    likeManager: LikeManager,
-    onResult: (List<DiscoveryPost>) -> Unit
-) = withContext(Dispatchers.IO) {
-    // ... Implementation needed ...
-    onResult(posts) // Placeholder
-}
-*/ 
