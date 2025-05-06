@@ -45,9 +45,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import dev.riss.muse.R
 import dev.riss.muse.SupabaseClient
 import dev.riss.muse.ui.theme.DeepAquaContainer
-import dev.riss.muse.R
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.delay
@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 fun LoginPage(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var isSignup by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -200,13 +201,48 @@ fun LoginPage(navController: NavController) {
                         ),
                         textStyle = TextStyle(fontSize = textFieldFontSize)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AnimatedVisibility(visible = isSignup) {
+                        Column {
+                            TextField(
+                                value = confirmPassword,
+                                onValueChange = { confirmPassword = it },
+                                label = { Text("Confirm Password") },
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    cursorColor = MaterialTheme.colorScheme.primary,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                ),
+                                textStyle = TextStyle(fontSize = textFieldFontSize)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
                     Button(
                         onClick = {
                             isLoading = true
                             scope.launch {
                                 try {
                                     if (isSignup) {
+                                        if (password != confirmPassword) {
+                                            message = "Passwords do not match."
+                                            isLoading = false
+                                            return@launch
+                                        }
                                         SupabaseClient.client.auth.signUpWith(Email) {
                                             this.email = email
                                             this.password = password

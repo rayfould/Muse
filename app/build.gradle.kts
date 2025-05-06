@@ -15,6 +15,33 @@ val imgurClientId: String by lazy {
     clientId
 }
 
+// for local.properties keeping Supabase credentials secret
+val supabaseUrl: String by lazy {
+    val properties = Properties()
+    val localPropsFile = rootProject.file("local.properties")
+    if (!localPropsFile.exists()) {
+        throw GradleException("local.properties not found. Please create it with SUPABASE_URL and SUPABASE_KEY.")
+    }
+    properties.load(localPropsFile.inputStream())
+    val url = properties.getProperty("SUPABASE_URL")
+    if (url.isNullOrBlank()) {
+        throw GradleException("SUPABASE_URL missing in local.properties. Please add it.")
+    }
+    url
+}
+
+val supabaseKey: String by lazy {
+    val properties = Properties()
+    val localPropsFile = rootProject.file("local.properties")
+    // Existence check is done by supabaseUrl lazy val
+    properties.load(localPropsFile.inputStream())
+    val key = properties.getProperty("SUPABASE_KEY")
+    if (key.isNullOrBlank()) {
+        throw GradleException("SUPABASE_KEY missing in local.properties. Please add it.")
+    }
+    key
+}
+
 // Load keystore properties
 val keystoreProperties = Properties()
 val keystorePropsFile = rootProject.file("local.properties")
@@ -66,7 +93,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "IMGUR_CLIENT_ID", "\"$imgurClientId\"") // for ImgurAPI key
+        buildConfigField("String", "IMGUR_CLIENT_ID", "\"$imgurClientId\"") 
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"") 
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"") 
     }
 
     buildTypes {
