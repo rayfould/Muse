@@ -45,6 +45,7 @@ import com.example.creativecommunity.ui.theme.DeepAquaContainer
 import com.example.creativecommunity.ui.theme.OnDeepAquaContainer
 // Add graphicsLayer import
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.statusBarsPadding
 
 @Composable
 fun MainPage(navController: NavController) {
@@ -65,13 +66,15 @@ fun MainPage(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontalPadding),
+            // Add status bar padding
+            .statusBarsPadding()
+            .padding(horizontal = horizontalPadding),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 12.dp)
+                .padding(bottom = 12.dp)
                 .graphicsLayer { shadowElevation = 4.dp.toPx() }
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
                 .padding(vertical = 12.dp)
@@ -114,7 +117,7 @@ fun MainPage(navController: NavController) {
             columns = if (isWideScreen) GridCells.Fixed(4) else GridCells.Fixed(2),
             verticalArrangement = Arrangement.spacedBy(gridSpacing),
             horizontalArrangement = Arrangement.spacedBy(gridSpacing),
-            modifier = Modifier.fillMaxSize().padding(bottom = gridSpacing)
+            modifier = Modifier.fillMaxSize()
         ) {
             itemsIndexed(categories) { index, (key, displayName, iconVector) ->
                 val usePrimaryContainer = index % 2 == 0
@@ -153,6 +156,9 @@ fun MainPage(navController: NavController) {
                         )
                     }
                 }
+            }
+            item { 
+                Spacer(modifier = Modifier.height(80.dp)) // Adjust height as needed
             }
         }
     }

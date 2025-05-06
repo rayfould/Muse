@@ -73,6 +73,7 @@ import java.time.Instant
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.foundation.layout.statusBarsPadding
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -311,6 +312,8 @@ fun ProfilePage(navController: NavController) {
                 editedUsername = userProfile?.username ?: ""
                 editedBio = userProfile?.bio ?: ""
                 hasChanges = true 
+                // Use local snackbarHostState
+                scope.launch { snackbarHostState.showSnackbar("Failed to save changes: ${e.message}") }
             } finally {
                 isSaving = false
             }
@@ -362,6 +365,8 @@ fun ProfilePage(navController: NavController) {
             } catch (e: Exception) {
                 Log.e("ProfilePage", "Error updating email: ${e.message}", e)
                 emailChangeError = "Failed to update email: ${e.message}"
+                // Use local snackbarHostState for error
+                scope.launch { snackbarHostState.showSnackbar("Failed to update email: ${e.message}") }
             } finally {
                 isEmailChanging = false
             }
@@ -388,6 +393,8 @@ fun ProfilePage(navController: NavController) {
             } catch (e: Exception) {
                 Log.e("ProfilePage", "Error updating password: ${e.message}", e)
                 passwordChangeError = "Failed to update password: ${e.message}"
+                // Use local snackbarHostState for error
+                scope.launch { snackbarHostState.showSnackbar("Failed to update password: ${e.message}") }
             } finally {
                 isPasswordChanging = false
             }
@@ -398,13 +405,14 @@ fun ProfilePage(navController: NavController) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background // Apply background to Scaffold
-    ) { paddingValues -> // Content lambda provides padding
-        // Original Column moved inside Scaffold, apply padding
+    ) { paddingValuesInternal -> // Use different name to avoid confusion
+        // Root Column
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues) // Apply Scaffold padding
-                .padding(horizontal = 16.dp) // Apply original horizontal padding
+                .statusBarsPadding() // Add padding for the status bar
+                // DO NOT apply paddingValuesInternal here to allow overlap
+                .padding(horizontal = 16.dp) // Apply specific horizontal padding
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

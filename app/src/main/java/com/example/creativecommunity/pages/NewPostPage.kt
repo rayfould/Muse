@@ -167,8 +167,7 @@ fun NewPostPage(navController: NavController, category: String) {
             contentAlignment = Alignment.TopCenter
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
