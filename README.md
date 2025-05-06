@@ -5,7 +5,8 @@
 **Team Members:** Jeremy Lau, Rudolf Rissling
 
 **[Project Proposal Presentation](https://docs.google.com/presentation/d/1y1cIMZUi84rIxTYbBRZkv12nnpZyd2N2_cxEGesJl_4/edit#slide=id.p).**<br>
-**[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**
+**[Project Checkpoint Presentation](https://docs.google.com/presentation/d/1rR9ol3he5aJ5z11v6b9Mt69DvwdmCIGf3B3Rtbwba0s/edit?usp=sharing).**<br>
+**[Final Project Presentation](https://docs.google.com/presentation/d/12Gz8UlzyIpiWZ9X3rvbdxE-IqAGEo6es-8N6PCdgfNQ/edit?usp=sharing).**
 
 
 ## Table of Contents:
