@@ -42,7 +42,7 @@
 9. View and edit your own profile - profile image, bio, username etc.
 10. Make account changes - e.g. changing password, change your email
 11. Account creation, login, and logout
-12. Splash screen loading screen - helps users begin the immersive creative experience with a colorful eye - telling users that they can now open up their creative outlets in our app
+12. Splash screen loading screen - colorful gradient, begins user curiosity and creative flow
 13. View saved posts as well as your own posts
 
 ## Design Decisions
@@ -57,7 +57,6 @@
 4. Login and App Startup
    - Originally, we had a regular login screen with just a form
    - Adding animations with slow fade-in and fade-out of images and text, this created a sense for the user that they are now entering a new space - not just logging in
-   - The decision to go with the colorful eye really made a large difference, especially on a larger tablet-like display.
 5. Portrait vs Landscape mode
    - For larger screens like a tablet, we use dp dimension cutoffs (e.g. 600) to display our UI differently
    - On tablets, we use more grid columns on the main page / all categories page
@@ -207,7 +206,7 @@ Maybe have a way to add friends or follow people whose art that you like would b
 **Feedback:**<br>
 I like the layout on the home screen with the categories, feels very organized - I know how the app works, pretty straightforward for a new user, I like that I can physically click and navigate into different communities - it feels better than maybe using a filter or search bar.<br><br>
 **Suggested improvements:**<br>
-Fade in could be a bit slower to get a better effect. In the home page with the categories, could fade out the background eye image.<br><br>
+Fade in could be a bit slower to get a better effect. Maybe choose a feed from different categories instead of going to each one - a tailored home page. <br><br>
 
 **<ins>Friend #3</ins>**<br><br>
 **Feedback:**<br>
