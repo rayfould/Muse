@@ -389,12 +389,9 @@ fun CategoryFeed(navController: NavController, category: String) {
                  Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) { // Added weight
                     Text(fetchError!!, color = MaterialTheme.colorScheme.error)
                 }
-            } else if (displayedPosts.isEmpty() && promptData == null) {
-                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) { // Added weight
-                    Text("No posts yet in this category.", style = MaterialTheme.typography.bodyMedium)
-                }
             } else {
-                LazyColumn(
+                 // Use LazyColumn for both prompt and posts, or empty message
+                 LazyColumn(
                     modifier = Modifier.weight(1f), // Make LazyColumn take remaining space
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -478,27 +475,40 @@ fun CategoryFeed(navController: NavController, category: String) {
                         }
                     }
 
-                    // Keep Posts list
-                    items(
-                        items = displayedPosts, 
-                        key = { post: FeedPost -> post.id }
-                    ) { post: FeedPost ->
-                        Box(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Post(
-                                navController = navController,
-                                authorId = post.user.auth_id,
-                                postId = post.id,
-                                profileImage = post.user.profile_image ?: defaultProfileImages.random(),
-                                username = post.user.username ?: "User",
-                                postImage = post.image_url,
-                                caption = post.content,
-                                likeCount = 0,
-                                commentCount = commentCounts[post.id] ?: 0,
-                                onCommentClicked = { navController.navigate("individual_post/${post.id}") },
-                                onImageClick = { showPostImageDialog = true; selectedPostImageUrl = post.image_url }
-                            )
+                    // Conditionally display posts or "No posts" message
+                    if (displayedPosts.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillParentMaxSize() // Fill available space in LazyColumn
+                                    .padding(top = if (promptData != null) 16.dp else 120.dp), // Add more top padding if no prompt
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No posts in this category yet.", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    } else {
+                         items(
+                            items = displayedPosts, 
+                            key = { post: FeedPost -> post.id }
+                        ) { post: FeedPost ->
+                            Box(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Post(
+                                    navController = navController,
+                                    authorId = post.user.auth_id,
+                                    postId = post.id,
+                                    profileImage = post.user.profile_image ?: defaultProfileImages.random(),
+                                    username = post.user.username ?: "User",
+                                    postImage = post.image_url,
+                                    caption = post.content,
+                                    likeCount = 0,
+                                    commentCount = commentCounts[post.id] ?: 0,
+                                    onCommentClicked = { navController.navigate("individual_post/${post.id}") },
+                                    onImageClick = { showPostImageDialog = true; selectedPostImageUrl = post.image_url }
+                                )
+                            }
                         }
                     }
                     item {

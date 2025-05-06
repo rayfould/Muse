@@ -600,7 +600,11 @@ fun ProfilePage(navController: NavController) {
                             if (isWideScreen) {
                                 // Wide Screen: Use FlowRow for buttons
                                 FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        // Limit container width to 75% of available space
+                                        .fillMaxWidth(0.75f)
+                                        // Shrink container to fit widest button within the 75% limit
+                                        .width(IntrinsicSize.Min),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                     maxItemsInEachRow = 3 // Example: Limit items per row for better structure
@@ -614,7 +618,11 @@ fun ProfilePage(navController: NavController) {
                             } else {
                                 // Narrow Screen: Use Column
                                 Column(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        // Limit container width to 75% of available space
+                                        .fillMaxWidth(0.75f)
+                                        // Shrink container to fit widest button within the 75% limit
+                                        .width(IntrinsicSize.Min),
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
@@ -934,11 +942,13 @@ private fun SettingsButtons(
     showEmailDialog: (Boolean) -> Unit,
     showPasswordDialog: (Boolean) -> Unit
 ) {
-    val buttonWidth = 180.dp // Define a common width
+    // Remove fixed width definition
+    // val buttonWidth = 180.dp // Define a common width
 
     Button(
         onClick = { showEmailDialog(true) },
-        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        // Remove fixed width, add fillMaxWidth to expand to parent's intrinsic width
+        modifier = Modifier.height(48.dp).fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colorScheme.primary,
@@ -958,7 +968,8 @@ private fun SettingsButtons(
 
     Button(
         onClick = { showPasswordDialog(true) },
-        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        // Remove fixed width, add fillMaxWidth
+        modifier = Modifier.height(48.dp).fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colorScheme.primary,
@@ -978,7 +989,8 @@ private fun SettingsButtons(
 
     Button(
         onClick = { navController.navigate("about_us") },
-        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        // Remove fixed width, add fillMaxWidth
+        modifier = Modifier.height(48.dp).fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colorScheme.primary,
@@ -1003,7 +1015,8 @@ private fun SettingsButtons(
     // Saved Posts button
     Button(
         onClick = { navController.navigate("saved_posts") },
-        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        // Remove fixed width, add fillMaxWidth
+        modifier = Modifier.height(48.dp).fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colorScheme.primary,
@@ -1025,7 +1038,8 @@ private fun SettingsButtons(
     // My Posts button
     Button(
         onClick = { navController.navigate("my_posts") },
-        modifier = Modifier.height(48.dp).width(buttonWidth), // Apply fixed width
+        // Remove fixed width, add fillMaxWidth
+        modifier = Modifier.height(48.dp).fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = MaterialTheme.colorScheme.primary,

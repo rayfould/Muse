@@ -19,6 +19,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
 
 @Composable
 fun BottomNavigationBar(
@@ -43,7 +46,9 @@ fun BottomNavigationBar(
             containerColor = MaterialTheme.colorScheme.surface,
             modifier = modifier
                 .clip(RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp))
+                .fillMaxHeight()
         ) {
+            Spacer(Modifier.weight(1f))
             items.forEach { (route, label, icon) ->
                 val selected = currentRoute == route
                 NavigationRailItem(
@@ -74,6 +79,7 @@ fun BottomNavigationBar(
                     onClick = { navController.navigate(route) }
                 )
             }
+            Spacer(Modifier.weight(1f))
         }
     } else {
         NavigationBar(
