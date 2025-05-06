@@ -602,6 +602,168 @@ fun ProfilePage(navController: NavController) {
             }
         }
     }
+
+    // Dialog to show enlarged profile picture
+    if (showPfpDialog) {
+        Dialog(onDismissRequest = { showPfpDialog = false }) {
+            // Use a Surface for better dialog appearance (optional background/shape)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                 // Optional: Add a background color if needed, otherwise defaults
+                 // color = MaterialTheme.colorScheme.surface 
+            ) {
+                 // Use the latest image URL (either uploaded or from profile)
+                val imageUrlToShow = imgurImageURL ?: userProfile?.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg" // Fallback
+
+                AsyncImage(
+                    model = imageUrlToShow,
+                    contentDescription = "Enlarged Profile Picture",
+                    modifier = Modifier
+                        .sizeIn(maxHeight = 500.dp, maxWidth = 500.dp) // Limit size
+                        .clip(RoundedCornerShape(16.dp)) // Clip image inside surface
+                        .clickable { showPfpDialog = false }, // Click image to dismiss
+                    contentScale = ContentScale.Fit // Fit within the bounds
+                )
+            }
+        }
+    }
+
+    // Email Change Dialog
+    if (showEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showEmailDialog = false
+                emailChangeError = null // Clear error on dismiss
+            },
+            title = { Text("Change Email") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newEmail,
+                        onValueChange = { newEmail = it },
+                        label = { Text("New Email") },
+                        isError = emailChangeError != null,
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = confirmEmail,
+                        onValueChange = { confirmEmail = it },
+                        label = { Text("Confirm New Email") },
+                        isError = emailChangeError != null,
+                        singleLine = true
+                    )
+                    if (emailChangeError != null) {
+                        Text(
+                            text = emailChangeError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { 
+                        if (newEmail.isBlank() || confirmEmail.isBlank()) {
+                            emailChangeError = "Emails cannot be empty."
+                        } else if (newEmail != confirmEmail) {
+                            emailChangeError = "Emails do not match."
+                        } else {
+                            // Consider adding more robust email validation here
+                            updateEmail(newEmail)
+                        }
+                    },
+                    enabled = !isEmailChanging
+                ) {
+                    if (isEmailChanging) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Update")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showEmailDialog = false 
+                    emailChangeError = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Password Change Dialog
+    if (showPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showPasswordDialog = false 
+                passwordChangeError = null // Clear error on dismiss
+            },
+            title = { Text("Change Password") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        isError = passwordChangeError != null,
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        isError = passwordChangeError != null,
+                        singleLine = true
+                    )
+                     if (passwordChangeError != null) {
+                        Text(
+                            text = passwordChangeError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { 
+                        if (newPassword.isBlank() || confirmPassword.isBlank()) {
+                            passwordChangeError = "Passwords cannot be empty."
+                        } else if (newPassword.length < 6) { // Example validation
+                            passwordChangeError = "Password must be at least 6 characters."
+                        } else if (newPassword != confirmPassword) {
+                            passwordChangeError = "Passwords do not match."
+                        } else {
+                            updatePassword(newPassword)
+                        }
+                     },
+                     enabled = !isPasswordChanging
+                ) {
+                     if (isPasswordChanging) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Update")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showPasswordDialog = false
+                    passwordChangeError = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 // Shared composable for the main settings buttons

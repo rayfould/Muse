@@ -311,9 +311,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 } else {
                     Scaffold(
                         bottomBar = {
-                            if (currentDestination?.route?.startsWith("view_profile/") != true) {
-                                BottomNavigationBar(navController = navController)
-                            }
+                            BottomNavigationBar(navController = navController)
                         }
                     ) { paddingValues ->
                         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
