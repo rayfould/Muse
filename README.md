@@ -44,7 +44,8 @@
 10. Make account changes - e.g. changing password, change your email
 11. Account creation, login, and logout
 12. Splash screen loading screen - colorful gradient, begins user curiosity and creative flow
-13. View saved posts as well as your own posts
+13. View saved posts as well as your own posts (access through My Profile page)
+14. See badges for your own accomplishments on your profile
 
 ## Design Decisions
 1. Focus on building communities around creative outlets
