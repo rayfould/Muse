@@ -104,9 +104,10 @@ fun NewPostPage(navController: NavController, category: String) {
 
     // Ensure tempFileUri is created only once per composable instance
     val tempFileUri = remember {
+        val authority = "${BuildConfig.APPLICATION_ID}.fileprovider"
         FileProvider.getUriForFile(
             context,
-            "com.example.Muse.fileprovider",
+            authority,
             java.io.File(context.cacheDir, "temp_image.jpg")
         )
     }
