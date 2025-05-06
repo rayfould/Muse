@@ -67,12 +67,14 @@
 
 Directory:<br>
 
-MuseApp.kt<br>
+MuseApp.kt (listed as CreativeCommunityApp.kt) <br>
 MainActivity.kt<br>
 Navigation.kt<br>
 SupabaseClient.kt<br>
 
 Components (folder)<br>
+|-->  AchievementTiersDisplay.kt<br>
+|-->  BadgeDisplay.kt<br>
 |-->  BottomNavigation.kt<br>
 
 Models (folder)<br>
@@ -128,7 +130,7 @@ Also: <br>
 From the BottomNavigation.kt which is on every page, users can route to the following pages (e.g. from any page can navigate to the following pages:)
 1. DiscoveryPage
 2. MainPage
-3. ProfilePage --> can go to MyPostsPage or SavedPostsPage from here
+3. ProfilePage --> can go to MyPostsPage or SavedPostsPage from here, also contains badges and achievements for the user profile
 
 **Notes:**<br>
 Post.kt
@@ -162,6 +164,7 @@ Interactions with database so far:
 7. Updating the like count and comment count
 8. Pulling weekly prompts for creative communities from Supabase
 9. Updating saved post relationship between post and user
+10. Badges and achievement tiers for users' profiles
 
 Database Schema:
 ![Database Image](supabase_schema_png2.png)
