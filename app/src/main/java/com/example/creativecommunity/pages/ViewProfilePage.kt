@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.creativecommunity.SupabaseClient
@@ -59,6 +61,7 @@ fun ViewProfilePage(navController: NavController, userId: String) {
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showPfpDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userId) {
         isLoading = true
@@ -124,7 +127,8 @@ fun ViewProfilePage(navController: NavController, userId: String) {
                         contentDescription = "Profile photo for ${userProfile!!.username}",
                         modifier = Modifier
                             .size(120.dp)
-                            .clip(CircleShape),
+                            .clip(CircleShape)
+                            .clickable { showPfpDialog = true },
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -155,6 +159,26 @@ fun ViewProfilePage(navController: NavController, userId: String) {
             else -> {
                 // Error message is already shown via the error state, but we could add 
                 // a specific "User not found" message here if needed.
+            }
+        }
+    }
+
+    if (showPfpDialog) {
+        Dialog(onDismissRequest = { showPfpDialog = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                val imageUrlToShow = userProfile?.profileImage ?: "https://i.imgur.com/DyFZblf.jpeg" // Fallback
+
+                AsyncImage(
+                    model = imageUrlToShow,
+                    contentDescription = "Enlarged Profile Picture",
+                    modifier = Modifier
+                        .sizeIn(maxHeight = 500.dp, maxWidth = 500.dp) 
+                        .clip(RoundedCornerShape(16.dp)) 
+                        .clickable { showPfpDialog = false }, 
+                    contentScale = ContentScale.Fit 
+                )
             }
         }
     }
