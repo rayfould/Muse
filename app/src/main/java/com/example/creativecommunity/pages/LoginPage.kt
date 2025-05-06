@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -42,16 +45,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.R
+import com.example.creativecommunity.SupabaseClient
 import com.example.creativecommunity.ui.theme.DeepAquaContainer
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.Image
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -145,7 +145,7 @@ fun LoginPage(navController: NavController) {
                                 painter = painterResource(id = R.drawable.logo_transparent),
                                 contentDescription = stringResource(id = R.string.content_desc_login_logo),
                                 modifier = Modifier
-                                    .height(320.dp)
+                                    .height(300.dp)
                                     .padding(bottom = 0.dp)
                             )
                         }
