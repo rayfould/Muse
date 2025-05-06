@@ -43,11 +43,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.creativecommunity.SupabaseClient
+import com.example.creativecommunity.R
 import com.example.creativecommunity.ui.theme.DeepAquaContainer
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.Image
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -89,178 +93,190 @@ fun LoginPage(navController: NavController) {
         )
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(gradientBrush)
-            .padding(horizontalPadding),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
     ) {
         AnimatedVisibility(
             visible = showTitle && !showForm,
             enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 1000))
+            exit = fadeOut(animationSpec = tween(durationMillis = 1000)),
+            modifier = Modifier.align(Alignment.Center)
         ) {
             Text(
                 text = "Muse",
                 fontSize = titleFontSize,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 32.dp)
             )
         }
+
         AnimatedVisibility(
             visible = showForm,
             enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
             exit = fadeOut(animationSpec = tween(durationMillis = 1000))
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .widthIn(max = maxFormWidth)
-                    .padding(verticalPadding)
+                    .fillMaxSize()
+                    .padding(horizontalPadding)
+                    .padding(top = 64.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top
             ) {
-                AnimatedVisibility(
-                    visible = showTitleWithForm,
-                    enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
-                    exit = fadeOut(animationSpec = tween(durationMillis = 1000))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .widthIn(max = maxFormWidth)
+                        .padding(verticalPadding)
                 ) {
-                    Text(
-                        text = "Muse",
-                        fontSize = titleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 32.dp)
+                    AnimatedVisibility(
+                        visible = showTitleWithForm,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 1000))
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_transparent),
+                                contentDescription = stringResource(id = R.string.content_desc_login_logo),
+                                modifier = Modifier
+                                    .height(350.dp)
+                                    .padding(bottom = 0.dp)
+                            )
+                        }
+                    }
+                    TextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        ),
+                        textStyle = TextStyle(fontSize = textFieldFontSize)
                     )
-                }
-                TextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    ),
-                    textStyle = TextStyle(fontSize = textFieldFontSize)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    ),
-                    textStyle = TextStyle(fontSize = textFieldFontSize)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        isLoading = true
-                        scope.launch {
-                            try {
-                                if (isSignup) {
-                                    SupabaseClient.client.auth.signUpWith(Email) {
-                                        this.email = email
-                                        this.password = password
-                                        this.data = kotlinx.serialization.json.buildJsonObject {
-                                            put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        ),
+                        textStyle = TextStyle(fontSize = textFieldFontSize)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            isLoading = true
+                            scope.launch {
+                                try {
+                                    if (isSignup) {
+                                        SupabaseClient.client.auth.signUpWith(Email) {
+                                            this.email = email
+                                            this.password = password
+                                            this.data = kotlinx.serialization.json.buildJsonObject {
+                                                put("username", kotlinx.serialization.json.JsonPrimitive(email.split("@")[0]))
+                                            }
+                                        }
+                                        SupabaseClient.client.auth.signInWith(Email) {
+                                            this.email = email
+                                            this.password = password
+                                        }
+                                        navController.navigate("main") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    } else {
+                                        SupabaseClient.client.auth.signInWith(Email) {
+                                            this.email = email
+                                            this.password = password
+                                        }
+                                        navController.navigate("main") {
+                                            popUpTo("login") { inclusive = true }
                                         }
                                     }
-                                    SupabaseClient.client.auth.signInWith(Email) {
-                                        this.email = email
-                                        this.password = password
-                                    }
-                                    navController.navigate("main") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                } else {
-                                    SupabaseClient.client.auth.signInWith(Email) {
-                                        this.email = email
-                                        this.password = password
-                                    }
-                                    navController.navigate("main") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
+                                } catch (e: Exception) {
+                                    message = "${if (isSignup) "Signup" else "Login"} failed: ${e.message}"
+                                } finally {
+                                    isLoading = false
                                 }
-                            } catch (e: Exception) {
-                                message = "${if (isSignup) "Signup" else "Login"} failed: ${e.message}"
-                            } finally {
-                                isLoading = false
                             }
-                        }
-                    },
-                    enabled = !isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                        disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Text(
-                        if (isSignup) "Sign Up" else "Login",
-                        fontSize = buttonFontSize
-                    )
-                }
-                if (isLoading) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = { isSignup = !isSignup }) {
-                    Text(
-                        text = if (isSignup) "Already have an account? Login" else "Need an account? Sign Up",
-                        fontSize = textFieldFontSize,
-                        fontWeight = FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                message?.let {
+                        },
+                        enabled = !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Text(
+                            if (isSignup) "Sign Up" else "Login",
+                            fontSize = buttonFontSize
+                        )
+                    }
+                    if (isLoading) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        it,
-                        color = if (it.contains("failed", ignoreCase = true)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = textFieldFontSize,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
+                    TextButton(onClick = { isSignup = !isSignup }) {
+                        Text(
+                            text = if (isSignup) "Already have an account? Login" else "Need an account? Sign Up",
+                            fontSize = textFieldFontSize,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    message?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            it,
+                            color = if (it.contains("failed", ignoreCase = true)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = textFieldFontSize,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                 }
             }
         }

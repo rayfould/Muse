@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">CreativeCommunity</string>
+    <string name="app_name">Muse</string>
+    <string name="content_desc_logo">Application Logo</string>
+    <string name="content_desc_login_logo">Muse App Logo</string>
 </resources>
