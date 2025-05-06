@@ -384,8 +384,6 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Button(
                                     onClick = {
-                                        // Only cancel the reply, don't hide the box
-                                        // showCommentBox = false 
                                         submitError = null
                                         replyingToComment = null
                                     },
@@ -429,7 +427,6 @@ fun IndividualPostPage(navController: NavController, postId: String?) {
                                                         comments = commentsResult
                                                         commentInput = ""
                                                         replyingToComment = null
-                                                        showCommentBox = false // Optionally hide after successful post
                                                     } else {
                                                         submitError = "Could not find your user account."
                                                     }
